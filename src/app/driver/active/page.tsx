@@ -1,0 +1,488 @@
+"use client";
+
+import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { Job, jobsDB } from "@/lib/data";
+import { useToast } from "@/context/ToastContext";
+import {
+  Truck,
+  MapPin,
+  CheckCircle2,
+  Phone,
+  Camera,
+  RotateCcw,
+  Check,
+  Zap,
+  Navigation,
+  ArrowRight
+} from "lucide-react";
+
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+
+function DriverActiveRunContent() {
+  const toast = useToast();
+  const searchParams = useSearchParams();
+  const queryId = searchParams.get("id");
+
+  const [job, setJob] = useState<Job>(jobsDB[0]);
+  const [recipientName, setRecipientName] = useState("Sandra Wilson");
+  const [deliveryNote, setDeliveryNote] = useState("Dock 2 Receiving - Heavy forklift required");
+  const [photoAttached, setPhotoAttached] = useState(false);
+  const [hasDrawn, setHasDrawn] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDrawingRef = useRef(false);
+
+  useEffect(() => {
+    let currentDriver = "Dave Miller";
+    const savedUser = typeof window !== "undefined" ? localStorage.getItem("trackpoint_user") : null;
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u.name) currentDriver = u.name;
+      } catch (e) {}
+    }
+
+    fetch("/api/jobs")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.jobs?.length > 0) {
+          let selected = null;
+          if (queryId) {
+            selected = data.jobs.find((j: Job) => j.id.toLowerCase() === queryId.toLowerCase());
+          }
+          if (!selected) {
+            const dLower = currentDriver.toLowerCase();
+            // Prioritize active/assigned job for this specific driver
+            selected =
+              data.jobs.find(
+                (j: Job) =>
+                  (j.driver.toLowerCase().includes(dLower) ||
+                    dLower.includes(j.driver.toLowerCase()) ||
+                    (dLower.includes("liam") && (j.driver.toLowerCase().includes("liam") || j.vehicle.toLowerCase().includes("nl-01"))) ||
+                    (dLower.includes("dave") && (j.driver.toLowerCase().includes("dave") || j.vehicle.toLowerCase().includes("nl-14"))) ||
+                    (dLower.includes("mick") && (j.driver.toLowerCase().includes("mick") || j.vehicle.toLowerCase().includes("nl-19"))) ||
+                    (dLower.includes("mark") && (j.driver.toLowerCase().includes("mark") || j.vehicle.toLowerCase().includes("nl-31")))) &&
+                  (j.status === "Assigned" || j.status === "In Transit")
+              ) ||
+              data.jobs.find(
+                (j: Job) =>
+                  j.driver.toLowerCase().includes(dLower) ||
+                  dLower.includes(j.driver.toLowerCase())
+              );
+          }
+          if (!selected) {
+            selected = data.jobs[0];
+          }
+          if (selected) setJob(selected);
+        }
+      })
+      .catch(console.error);
+  }, [queryId]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.strokeStyle = "#34d399";
+    ctx.lineWidth = 2.8;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  }, [job.id]);
+
+  const getCanvasPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * (canvas.width / rect.width),
+      y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+  };
+
+  const startDraw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    isDrawingRef.current = true;
+    setHasDrawn(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const pos = getCanvasPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current) return;
+    if ("touches" in e) e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const pos = getCanvasPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  };
+
+  const stopDraw = () => {
+    isDrawingRef.current = false;
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasDrawn(false);
+  };
+
+  const handleStartTrip = async () => {
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "In Transit" })
+      });
+      const data = await res.json();
+      if (data.success && data.job) {
+        setJob(data.job);
+        toast.success(`Consignment #${job.id} is now IN TRANSIT on Stuart Highway. Customer notified!`, "Trip Started");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update trip status", "Error");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleConfirmPOD = async () => {
+    const signatureData = canvasRef.current ? canvasRef.current.toDataURL() : undefined;
+
+    if (!hasDrawn && !job.signatureDataUrl) {
+      toast.warning("Please capture consignee signature on the pad before confirming delivery.", "Signature Required");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "confirm_delivery",
+          recipientName: recipientName,
+          signatureDataUrl: signatureData
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.job) {
+        setJob(data.job);
+        toast.success(
+          `Signed by ${recipientName}. Official Tax Invoice generated (INV-2026-${job.id.replace("TP-", "")}) & archived (FR-07, FR-08).`,
+          "Delivery Confirmed!"
+        );
+      } else {
+        toast.error("Failed to submit delivery confirmation.", "Submission Error");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Network error", "Delivery Error");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const isDelivered = job.status === "Delivered" || job.status === "Invoiced";
+  const isInTransit = job.status === "In Transit";
+  const isAssigned = job.status === "Assigned" || job.status === "Booked";
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      {/* Left 7 Cols: Consignment Brief & Action Flow */}
+      <div className="lg:col-span-7 space-y-6">
+        
+        {/* Step Lifecycle Action Hero Card */}
+        <div className="bg-gradient-to-br from-slate-900/90 to-slate-950/90 border border-emerald-500/25 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+          <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl font-extrabold text-emerald-400">
+                Consignment #{job.id}
+              </span>
+              <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                {job.priority} Linehaul
+              </span>
+            </div>
+
+            <span
+              className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                isDelivered
+                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                  : isInTransit
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                  : "bg-blue-500/20 text-blue-300 border-blue-500/40"
+              }`}
+            >
+              Status: {job.status}
+            </span>
+          </div>
+
+          {/* Trip Progression Step Bar */}
+          <div className="grid grid-cols-3 gap-2 mb-5">
+            <div className="bg-slate-900/80 border border-emerald-500/40 rounded-xl p-3 text-center">
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 1</div>
+              <div className="text-xs font-bold text-emerald-400 mt-0.5">
+                {!isAssigned ? "✓ Departed Depot" : "Depot Staging"}
+              </div>
+            </div>
+
+            <div className={`bg-slate-900/80 border rounded-xl p-3 text-center ${isInTransit ? "border-amber-400/60" : isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 2</div>
+              <div className={`text-xs font-bold mt-0.5 ${isInTransit ? "text-amber-400" : isDelivered ? "text-emerald-400" : "text-slate-400"}`}>
+                {isDelivered ? "✓ Transit Done" : isInTransit ? "⚡ Stuart Hwy Transit" : "En Route"}
+              </div>
+            </div>
+
+            <div className={`bg-slate-900/80 border rounded-xl p-3 text-center ${isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 3</div>
+              <div className={`text-xs font-bold mt-0.5 ${isDelivered ? "text-emerald-400" : "text-slate-400"}`}>
+                {isDelivered ? "✓ e-POD Signed" : "Dock Sign-Off"}
+              </div>
+            </div>
+          </div>
+
+          {/* Dynamic Action Buttons */}
+          <div className="flex flex-col gap-3">
+            {isAssigned && (
+              <button
+                type="button"
+                disabled={isUpdating}
+                onClick={handleStartTrip}
+                className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-sm shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 cursor-pointer transition"
+              >
+                <Truck size={18} />
+                <span>Start Trip & Depart Depot (Set In-Transit)</span>
+              </button>
+            )}
+
+            {isInTransit && (
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => toast.info("Dock arrival notification transmitted to customer receiving department.", "Arrival Pushed")}
+                  className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition"
+                >
+                  <MapPin size={15} className="text-emerald-400" />
+                  <span>Notify Store: 15 Mins Away</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById("pod-signature-box");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 cursor-pointer transition"
+                >
+                  <CheckCircle2 size={15} />
+                  <span>Proceed to Sign e-POD ➔</span>
+                </button>
+              </div>
+            )}
+
+            {isDelivered && (
+              <div className="bg-emerald-500/15 border border-emerald-500/40 rounded-xl p-3.5 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold">
+                  <CheckCircle2 size={16} />
+                  <span>Delivery Completed & e-POD Verified ({job.completedAt || "Today"})</span>
+                </div>
+
+                <Link
+                  href="/driver/manifest"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold no-underline transition"
+                >
+                  Next Job in Queue ➔
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Routing & Cargo Specifications Card */}
+        <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 space-y-4 backdrop-blur-md">
+          <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 m-0">
+            <MapPin size={16} className="text-emerald-400" />
+            <span>Stuart Highway Route & Customer Dock</span>
+          </h3>
+
+          <div className="space-y-3">
+            <div className="bg-slate-950/60 p-3 rounded-xl border border-white/5">
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Pickup Origin Depot</div>
+              <div className="text-sm font-semibold text-slate-200 mt-0.5">📍 {job.pickup}</div>
+            </div>
+
+            <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-500/20">
+              <div className="text-[10px] text-emerald-400 uppercase font-bold">Destination Receiving Dock</div>
+              <div className="text-sm font-bold text-slate-100 mt-0.5">🏁 {job.dropoff}</div>
+              <div className="text-xs text-slate-400 mt-1">
+                Account: <strong className="text-slate-200">{job.customer}</strong>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/60 p-3 rounded-xl border border-white/5">
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Cargo Manifest</div>
+              <div className="text-sm font-semibold text-amber-300 mt-0.5">📦 {job.goods}</div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <a
+              href="tel:+61889721144"
+              className="flex-1 py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-bold no-underline flex items-center justify-center gap-1.5 transition"
+            >
+              <Phone size={13} className="text-emerald-400" />
+              <span>Call Receiving Dock</span>
+            </a>
+            <Link
+              href="/driver/navigation"
+              className="flex-1 py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-bold no-underline flex items-center justify-center gap-1.5 transition"
+            >
+              <Navigation size={13} className="text-emerald-400" />
+              <span>View Highway Map</span>
+            </Link>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Right 5 Cols: e-POD Signature Box */}
+      <div
+        id="pod-signature-box"
+        className="lg:col-span-5 bg-gradient-to-br from-slate-900/95 to-slate-950/98 border border-emerald-500/30 rounded-2xl p-6 shadow-2xl space-y-4 backdrop-blur-md"
+      >
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2 text-emerald-400">
+            <CheckCircle2 size={18} />
+            <h3 className="text-base font-extrabold m-0">e-POD Digital Signature</h3>
+          </div>
+          <span className="text-[10px] text-slate-400">FR-07 Compliant</span>
+        </div>
+
+        <p className="text-xs text-slate-400 m-0">
+          Capture consignee receiver name and touchscreen signature upon delivery.
+        </p>
+
+        {/* Recipient Input */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-300">Receiver Full Name:</label>
+          <input
+            type="text"
+            value={recipientName}
+            onChange={(e) => setRecipientName(e.target.value)}
+            placeholder="Receiver name (e.g. Sandra Wilson)"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/15 text-slate-100 text-sm focus:outline-none focus:border-emerald-400 transition"
+          />
+        </div>
+
+        {/* Delivery Note */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-300">Receiving Dock / Bay #:</label>
+          <input
+            type="text"
+            value={deliveryNote}
+            onChange={(e) => setDeliveryNote(e.target.value)}
+            placeholder="E.g. Dock 2, Forklift Bay"
+            className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-white/15 text-slate-100 text-xs focus:outline-none focus:border-emerald-400 transition"
+          />
+        </div>
+
+        {/* Canvas */}
+        <div className="space-y-1">
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-bold text-slate-300">Consignee Sign Here (Touch / Stylus):</label>
+            {hasDrawn && (
+              <button
+                type="button"
+                onClick={clearCanvas}
+                className="bg-transparent border-none text-red-400 hover:text-red-300 text-xs cursor-pointer flex items-center gap-1"
+              >
+                <RotateCcw size={11} />
+                <span>Clear</span>
+              </button>
+            )}
+          </div>
+
+          <div className="relative bg-slate-950 border-2 border-dashed border-emerald-500/40 rounded-xl h-36 overflow-hidden">
+            <canvas
+              ref={canvasRef}
+              width={420}
+              height={144}
+              className="w-full h-full touch-none cursor-crosshair"
+              onMouseDown={startDraw}
+              onMouseMove={draw}
+              onMouseUp={stopDraw}
+              onMouseLeave={stopDraw}
+              onTouchStart={startDraw}
+              onTouchMove={draw}
+              onTouchEnd={stopDraw}
+            />
+
+            {!hasDrawn && !job.signatureDataUrl && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs pointer-events-none gap-1">
+                <span>✍️ Sign directly on screen</span>
+                <span className="text-[10px] opacity-75">(Receiver signature required)</span>
+              </div>
+            )}
+
+            {job.signatureDataUrl && !hasDrawn && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                <img src={job.signatureDataUrl} alt="Verified Signature" className="max-h-20" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-2.5 pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              setPhotoAttached(true);
+              toast.success("Delivery dock cargo snapshot attached.", "Photo Attached");
+            }}
+            className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition"
+          >
+            <Camera size={14} className="text-emerald-400" />
+            <span>{photoAttached ? "✓ Cargo Photo Attached (1 Image)" : "+ Attach Delivery Dock Photo"}</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={isUpdating}
+            onClick={handleConfirmPOD}
+            className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-2 cursor-pointer transition"
+          >
+            <Check size={18} />
+            <span>{isUpdating ? "Submitting e-POD..." : "Confirm Delivery & Release Tax Invoice"}</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+export default function DriverActiveRunPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading active consignment...</div>}>
+      <DriverActiveRunContent />
+    </Suspense>
+  );
+}
+
