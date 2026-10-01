@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackPoint — Fleet Dispatch, GPS Tracking & Delivery Management</title>
+  <meta name="description" content="TrackPoint is an integrated logistics platform for NorthLine Freight & Logistics, featuring live GPS tracking, automated dispatch, digital e-POD capture, and real-time analytics.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Leaflet CSS for Interactive OpenStreetMap -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Chart.js for Fleet Performance Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body>
+  <!-- Global Top Header & Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <div class="brand-logo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+        </div>
+        <div class="brand-meta">
+          <div class="brand-title">TrackPoint <span class="badge-tag">PRT631</span></div>
+          <div class="brand-sub">NorthLine Freight & Logistics · NT Fleet Ops</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs" id="navTabs">
+        <button class="nav-btn active" data-view="customer-view" id="tabCustomer">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+          Customer Portal
+        </button>
+        <button class="nav-btn" data-view="dispatcher-view" id="tabDispatcher">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Dispatcher Board
+        </button>
+        <button class="nav-btn" data-view="driver-view" id="tabDriver">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+          Driver Mobile App (e-POD)
+        </button>
+        <button class="nav-btn" data-view="analytics-view" id="tabAnalytics">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          Fleet Analytics
+        </button>
+        <button class="nav-btn" data-view="invoices-view" id="tabInvoices">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Invoicing & POD
+        </button>
+      </nav>
+
+      <!-- System Status Indicators -->
+      <div class="header-status">
+        <div class="status-pill">
+          <span class="pulse-dot"></span>
+          <span>35 Vehicles Live</span>
+        </div>
+        <div class="status-pill env-badge">
+          <span>NT Corridor (ACST)</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+
+    <!-- ================= VIEW 1: CUSTOMER PORTAL ================= -->
+    <section id="customer-view" class="view-panel active">
+      <div class="view-grid grid-2col">
+        
+        <!-- Left: Booking Form -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div class="header-icon">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </div>
+            <div>
+              <h2>New Delivery Booking</h2>
+              <p class="text-muted">Instant quote, nearest vehicle dispatch & real-time ETA</p>
+            </div>
+          </div>
+
+          <form id="bookingForm" class="form-layout">
+            <div class="form-group">
+              <label for="clientName">Customer / Company Name</label>
+              <input type="text" id="clientName" value="Katherine Mining Supplies Ltd" required>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="pickupLocation">Pickup Location</label>
+                <select id="pickupLocation" required>
+                  <option value="darwin-depot" selected>Darwin Depot (120 Berrimah Rd, Darwin)</option>
+                  <option value="katherine-depot">Katherine Depot (Stuart Hwy)</option>
+                  <option value="alice-springs">Alice Springs Hub (Smith St)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="dropoffLocation">Delivery Destination</label>
+                <select id="dropoffLocation" required>
+                  <option value="katherine-depot" selected>Katherine Store (Katherine Terrace)</option>
+                  <option value="tennant-creek">Tennant Creek Mine Site</option>
+                  <option value="alice-springs">Alice Springs Logistics Centre</option>
+                  <option value="darwin-depot">Darwin Harbour Terminal</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="goodsDescription">Goods Description</label>
+                <input type="text" id="goodsDescription" value="2x Heavy Mining Replacement Parts (3.4t)" required>
+              </div>
+              <div class="form-group">
+                <label for="priorityType">Service Priority</label>
+                <select id="priorityType">
+                  <option value="Express">Express (Same Day Corridor)</option>
+                  <option value="Standard" selected>Standard (Scheduled Linehaul)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="booking-auto-notice">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+              <span>Automated Dispatch: System will instantly assign nearest vehicle via GPS telemetry (FR-02).</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="btnSubmitBooking">
+              <span>Confirm & Dispatch Consignment</span>
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+          </form>
+
+          <!-- Simulated SMS Notification Box -->
+          <div class="sms-preview-card" id="smsFeedCard">
+            <div class="sms-header">
+              <span class="sms-badge">Simulated SMS Alert (FR-09)</span>
+              <span class="sms-time" id="smsTimestamp">Just now</span>
+            </div>
+            <div class="sms-body" id="smsText">
+              "NorthLine Alert: Consignment #TP-8842 dispatched. Truck #NL-14 (Driver: Dave M.) en route. Estimated arrival: 14:45 ACST. Track live at trackpoint.northline.com.au"
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Live Customer Tracking Map -->
+        <div class="glass-card">
+          <div class="card-header flex-between">
+            <div class="flex-align">
+              <div class="header-icon icon-success">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+              </div>
+              <div>
+                <h2>Live Consignment Tracking (FR-05, FR-06)</h2>
+                <p class="text-muted">Real-time GPS coordinates refreshed every 15 seconds (NFR-02)</p>
+              </div>
+            </div>
+            <div class="badge-status in-transit" id="jobStatusBadge">In Transit</div>
+          </div>
+
+          <!-- Active Consignment Info Bar -->
+          <div class="consignment-bar">
+            <div class="c-info-item">
+              <span class="c-label">Consignment</span>
+              <span class="c-val" id="activeJobId">#TP-8842</span>
+            </div>
+            <div class="c-info-item">
+              <span class="c-label">Allocated Vehicle</span>
+              <span class="c-val" id="activeVehicle">Truck #NL-14 (Mack Titan)</span>
+            </div>
+            <div class="c-info-item">
+              <span class="c-label">Driver</span>
+              <span class="c-val" id="activeDriver">Dave Miller</span>
+            </div>
+            <div class="c-info-item">
+              <span class="c-label">Live ETA</span>
+              <span class="c-val text-accent" id="activeEta">14:45 ACST (38 min)</span>
+            </div>
+          </div>
+
+          <!-- Map Container -->
+          <div class="map-wrapper">
+            <div id="customerMap" class="leaflet-map-canvas"></div>
+            <div class="map-overlay-badge">
+              <span class="radar-ping"></span> Live Stuart Hwy Telemetry Feed
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 2: DISPATCHER BOARD ================= -->
+    <section id="dispatcher-view" class="view-panel">
+      <div class="view-grid grid-3col">
+        
+        <!-- Left: Active & Unassigned Jobs Queue -->
+        <div class="glass-card col-span-1">
+          <div class="card-header flex-between">
+            <div class="flex-align">
+              <div class="header-icon">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+              </div>
+              <div>
+                <h2>Dispatch Queue</h2>
+                <p class="text-muted">Automated nearest-vehicle queue</p>
+              </div>
+            </div>
+            <span class="badge-counter" id="unassignedCount">3 Active</span>
+          </div>
+
+          <div class="job-list-container" id="dispatcherJobList">
+            <!-- Dynamic Job Cards injected by JS -->
+          </div>
+        </div>
+
+        <!-- Right: Dispatcher Live Fleet Map & Controls -->
+        <div class="glass-card col-span-2">
+          <div class="card-header flex-between">
+            <div class="flex-align">
+              <div class="header-icon icon-primary">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+              </div>
+              <div>
+                <h2>Northern Territory Fleet Telematics Map</h2>
+                <p class="text-muted">35 Fitted Vehicles · 4 Corridors (Darwin, Katherine, Tennant Creek, Alice Springs)</p>
+              </div>
+            </div>
+            <div class="fleet-actions">
+              <button class="btn btn-secondary btn-sm" id="btnCenterDarwin">Center Darwin</button>
+              <button class="btn btn-secondary btn-sm" id="btnCenterNT">View All NT</button>
+            </div>
+          </div>
+
+          <div class="map-wrapper" style="height: 480px;">
+            <div id="dispatcherMap" class="leaflet-map-canvas"></div>
+          </div>
+
+          <!-- Quick Fleet Status Summary Strip -->
+          <div class="fleet-strip">
+            <div class="f-stat"><strong class="text-success">28</strong> On Route</div>
+            <div class="f-stat"><strong class="text-accent">4</strong> Loading / Depot</div>
+            <div class="f-stat"><strong class="text-muted">3</strong> Off Duty</div>
+            <div class="f-stat"><strong class="text-warning">0</strong> Unscheduled Overtime</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 3: DRIVER MOBILE APP (e-POD) ================= -->
+    <section id="driver-view" class="view-panel">
+      <div class="driver-mobile-container">
+        
+        <!-- Phone Frame Wrapper -->
+        <div class="mobile-frame">
+          <div class="mobile-speaker"></div>
+          
+          <!-- Screen Content -->
+          <div class="mobile-screen">
+            
+            <!-- Driver App Top Bar -->
+            <div class="mobile-top-bar">
+              <div>
+                <span class="mobile-app-title">TrackPoint Driver</span>
+                <span class="mobile-driver-name">Driver: Dave Miller (#DRV-104)</span>
+              </div>
+              <div class="connection-status-pill" id="offlineStatusPill">
+                <span class="dot-status online" id="statusDot"></span>
+                <span id="connectionText">4G Connected</span>
+              </div>
+            </div>
+
+            <!-- Offline Banner (Visible when offline) -->
+            <div class="offline-banner" id="offlineBanner" style="display: none;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+              <span>OFFLINE MODE: 1 POD queued locally. Auto-sync on reconnect (NFR-05).</span>
+            </div>
+
+            <!-- Current Job Card -->
+            <div class="driver-job-card">
+              <div class="job-badge-row">
+                <span class="tag tag-blue">ACTIVE RUN</span>
+                <span class="job-id-text">Consignment #TP-8842</span>
+              </div>
+              <h3 class="destination-title">Katherine Mining Store</h3>
+              <p class="address-text">📍 Lot 44 Katherine Terrace, Katherine NT 0850</p>
+              <div class="goods-pill">📦 2x Pallet Mining Parts (3.4t)</div>
+            </div>
+
+            <!-- Digital Proof-of-Delivery Capture Form -->
+            <div class="pod-section">
+              <div class="pod-header">
+                <h4>Digital Proof-of-Delivery (FR-07)</h4>
+                <span class="text-xs text-muted">Sign with finger or mouse</span>
+              </div>
+
+              <div class="form-group mb-2">
+                <label class="text-xs">Recipient Full Name</label>
+                <input type="text" id="recipientName" class="input-sm" value="Sandra Wilson" placeholder="Enter recipient name">
+              </div>
+
+              <!-- HTML5 Signature Canvas -->
+              <div class="signature-canvas-container">
+                <canvas id="signaturePad" width="340" height="120"></canvas>
+                <div class="canvas-placeholder" id="canvasPlaceholder">Sign on the line above</div>
+                <button type="button" class="btn-clear-sign" id="btnClearSign">Clear</button>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="driver-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnTogglePhoto">
+                  📷 <span>Add Delivery Photo (1 Attached)</span>
+                </button>
+                <button type="button" class="btn btn-success btn-block" id="btnConfirmDelivery">
+                  ✓ Confirm Delivery & Auto-Generate Invoice
+                </button>
+              </div>
+            </div>
+
+            <!-- Offline Simulation Control (For Lecturer / Demo Review) -->
+            <div class="offline-demo-toggle">
+              <label class="switch-label">
+                <span>Simulate Outback Cellular Dead Zone:</span>
+                <input type="checkbox" id="offlineToggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Driver Side Explanatory Card -->
+        <div class="driver-explanation glass-card">
+          <div class="card-header">
+            <div class="header-icon icon-accent">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div>
+              <h3>Driver App Design & Compliance</h3>
+              <p class="text-muted">Built for high outdoor glare, gloved hands & offline resilience</p>
+            </div>
+          </div>
+          <div class="explanation-points">
+            <div class="point-item">
+              <strong>Offline-First Resilience (NFR-05, ER-01):</strong>
+              <p>On remote NT routes with zero mobile signal, POD signatures & geotags are encrypted locally in IndexedDB/SQLite storage and automatically dispatched the second 4G is detected.</p>
+            </div>
+            <div class="point-item">
+              <strong>One-Handed Usability (UR-04, NFR-04):</strong>
+              <p>High-contrast palette, large touch targets, and streamlined single-screen flow allow drivers to complete handover in under 45 seconds.</p>
+            </div>
+            <div class="point-item">
+              <strong>Instant Invoicing Trigger (FR-08, PR-01):</strong>
+              <p>Delivery confirmation immediately creates a draft tax invoice in the Invoicing engine, slashing NorthLine's billing cycle from 9 days down to 3 days.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW 4: FLEET ANALYTICS ================= -->
+    <section id="analytics-view" class="view-panel">
+      
+      <!-- Top 4 KPI Tiles -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-title">On-Time Delivery Rate (RR-01)</span>
+          <div class="kpi-value text-success">94.2%</div>
+          <div class="kpi-change positive">▲ +3.1pp vs last month (Target: +5pp)</div>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Fleet Utilisation (RR-02)</span>
+          <div class="kpi-value text-primary">78.6%</div>
+          <div class="kpi-change positive">▲ +5.4pp active running time</div>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Delivery-to-Invoice Lag (O2)</span>
+          <div class="kpi-value text-accent">3.1 Days</div>
+          <div class="kpi-change positive">▼ -5.9 days reduced (Baseline: 9.0)</div>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-title">Active Delivery Exceptions (RR-03)</span>
+          <div class="kpi-value text-warning">1 Late</div>
+          <div class="kpi-change neutral">0 unresolved claims</div>
+        </div>
+      </div>
+
+      <!-- Charts Section -->
+      <div class="view-grid grid-2col mt-4">
+        <div class="glass-card">
+          <div class="card-header">
+            <h3>On-Time Delivery Trend (Weekly % — RR-01)</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="onTimeChart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-header">
+            <h3>Fleet Utilisation by Depot (Active vs Idle — RR-02)</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="utilisationChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-time Delivery Exception Log Table -->
+      <div class="glass-card mt-4">
+        <div class="card-header flex-between">
+          <div>
+            <h3>Delivery Exception Log (RR-03)</h3>
+            <p class="text-muted">Auto-flagged delays, re-routes, and delivery re-attempts</p>
+          </div>
+          <span class="badge-status delivered">All Clear</span>
+        </div>
+        
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Job ID</th>
+              <th>Corridor / Route</th>
+              <th>Vehicle & Driver</th>
+              <th>Issue Type</th>
+              <th>Variance</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>#TP-8839</strong></td>
+              <td>Darwin Metro Same-Day</td>
+              <td>Van #NL-02 (Sarah P.)</td>
+              <td>Client Gate Locked</td>
+              <td>+18 mins</td>
+              <td><span class="badge-status delivered">Resolved</span></td>
+            </tr>
+            <tr>
+              <td><strong>#TP-8841</strong></td>
+              <td>Darwin → Alice Springs</td>
+              <td>Semi #NL-31 (Mark T.)</td>
+              <td>Stuart Hwy Roadwork</td>
+              <td>+35 mins</td>
+              <td><span class="badge-status in-transit">In Transit</span></td>
+            </tr>
+            <tr>
+              <td><strong>#TP-8830</strong></td>
+              <td>Darwin → Katherine</td>
+              <td>Truck #NL-14 (Dave M.)</td>
+              <td>Heavy Wet Weather</td>
+              <td>+12 mins</td>
+              <td><span class="badge-status delivered">Completed</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- ================= VIEW 5: INVOICING & POD ================= -->
+    <section id="invoices-view" class="view-panel">
+      <div class="glass-card">
+        <div class="card-header flex-between">
+          <div class="flex-align">
+            <div class="header-icon icon-primary">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div>
+              <h2>Automated Tax Invoicing & POD Records (FR-08, PR-01, PR-05)</h2>
+              <p class="text-muted">Invoices drafted automatically upon digital POD sync — eliminates 9-day paper docket lag</p>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="window.print()">
+            🖨️ Print / Export PDF
+          </button>
+        </div>
+
+        <div class="invoice-box" id="invoiceContainer">
+          <div class="invoice-top">
+            <div>
+              <h1 class="inv-brand">NorthLine Freight & Logistics</h1>
+              <p class="text-sm text-muted">ABN: 54 109 238 901 · 120 Berrimah Road, Darwin NT 0828</p>
+            </div>
+            <div class="inv-meta">
+              <h2>TAX INVOICE</h2>
+              <p><strong>Invoice No:</strong> <span id="invNumber">INV-2026-8842</span></p>
+              <p><strong>Date Issued:</strong> 24 Sep 2026</p>
+              <p><strong>Payment Terms:</strong> 14 Days Net</p>
+            </div>
+          </div>
+
+          <hr class="inv-divider">
+
+          <div class="inv-parties">
+            <div class="inv-party">
+              <span class="c-label">Billed To:</span>
+              <strong id="invClient">Katherine Mining Supplies Ltd</strong><br>
+              Lot 44 Katherine Terrace<br>
+              Katherine NT 0850
+            </div>
+            <div class="inv-party">
+              <span class="c-label">Consignment Details:</span>
+              <strong>Job Ref:</strong> <span id="invJobRef">#TP-8842</span><br>
+              <strong>Corridor:</strong> Darwin Depot → Katherine Depot<br>
+              <strong>POD Verified By:</strong> Sandra Wilson (Signed 24/09/2026)
+            </div>
+          </div>
+
+          <table class="inv-table">
+            <thead>
+              <tr>
+                <th>Description of Freight Service</th>
+                <th>Weight / Pallets</th>
+                <th>Rate (AUD)</th>
+                <th>Amount (ex GST)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Scheduled Linehaul Freight: Darwin to Katherine Store</td>
+                <td>3.40 Tonnes (2 Pallets)</td>
+                <td>$320.00 / t</td>
+                <td>$1,088.00</td>
+              </tr>
+              <tr>
+                <td>Fuel Surcharge (Regional NT Corridor)</td>
+                <td>Flat Fee</td>
+                <td>—</td>
+                <td>$112.00</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" class="text-right"><strong>Subtotal:</strong></td>
+                <td>$1,200.00</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="text-right"><strong>GST (10%):</strong></td>
+                <td>$120.00</td>
+              </tr>
+              <tr class="inv-total-row">
+                <td colspan="3" class="text-right"><strong>Total Amount Due (AUD):</strong></td>
+                <td><strong>$1,320.00</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div class="inv-pod-proof">
+            <h4>Attached Electronic Proof of Delivery (e-POD)</h4>
+            <div class="pod-proof-row">
+              <div class="signature-box-preview">
+                <span class="c-label">Digital Signature Captured:</span>
+                <div class="sig-preview-img" id="invoiceSignaturePreview">
+                  <span class="text-xs text-muted">[Sandra Wilson — Digital Signature Verified via Driver Handset]</span>
+                </div>
+              </div>
+              <div class="pod-audit-meta">
+                <p><strong>Timestamp:</strong> 24-Sep-2026 14:38:12 ACST</p>
+                <p><strong>GPS Geotag:</strong> -14.4652° S, 132.2635° E (Katherine)</p>
+                <p><strong>Driver ID:</strong> Dave Miller (#DRV-104)</p>
+                <p><strong>Compliance:</strong> Corporations Act 7-Yr Retention Compliant (CR-04)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Reassignment Modal (For FR-03 / PR-02 Dispatcher Override) -->
+  <div class="modal-backdrop" id="overrideModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Manual Dispatcher Override (FR-03)</h3>
+        <button class="btn-close" id="btnCloseModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm text-muted mb-3">You are overriding the automated nearest-vehicle algorithm for Consignment <strong id="modalJobId">#TP-8842</strong>.</p>
+        
+        <div class="form-group mb-3">
+          <label>Select Alternative Driver & Vehicle</label>
+          <select id="modalDriverSelect">
+            <option value="DRV-104">Dave Miller — Truck #NL-14 (Mack Titan, Katherine)</option>
+            <option value="DRV-108">Sarah Peterson — Rigid #NL-08 (Hino 500, Darwin Metro)</option>
+            <option value="DRV-112">Mark Taylor — Road Train #NL-31 (Kenworth T909, Alice Springs)</option>
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label>Mandatory Override Reason Code (PR-02)</label>
+          <select id="modalReasonCode" required>
+            <option value="DRIVER_FATIGUE">Heavy Vehicle Fatigue Compliance Limit (CR-05)</option>
+            <option value="VEHICLE_CAPACITY">Specialized Refrigeration / Oversize Freight</option>
+            <option value="CUSTOMER_SPECIAL_REQUEST">VIP Customer Preferred Carrier Allocation</option>
+            <option value="MAINTENANCE">Scheduled Depot Maintenance Inspection</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" id="btnCancelOverride">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="btnConfirmOverride">Confirm Reassignment</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
