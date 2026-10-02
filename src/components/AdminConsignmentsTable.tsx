@@ -698,25 +698,26 @@ export default function AdminConsignmentsTable({
 
                       {/* Action Buttons */}
                       <td style={{ padding: "0.85rem 1rem", verticalAlign: "middle", textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", gap: "0.4rem" }}>
+                        <div style={{ display: "inline-flex", gap: "0.25rem", alignItems: "center" }}>
                           {job.status === "Booked" && (
                             <button
                               onClick={() => handleApproveJob(job)}
                               className="btn btn-sm"
                               style={{
-                                padding: "0.3rem 0.65rem",
-                                fontSize: "0.72rem",
-                                display: "flex",
+                                padding: "0.25rem 0.5rem",
+                                fontSize: "0.68rem",
+                                display: "inline-flex",
                                 alignItems: "center",
-                                gap: "0.25rem",
+                                gap: "0.2rem",
                                 background: "linear-gradient(135deg, #059669, #10b981)",
                                 color: "#ffffff",
                                 border: "1px solid #34d399",
-                                fontWeight: 700
+                                fontWeight: 700,
+                                borderRadius: "5px"
                               }}
                               title="Approve Suggested Match & Dispatch Linehaul"
                             >
-                              <CheckCircle2 size={12} />
+                              <CheckCircle2 size={11} />
                               <span>Approve</span>
                             </button>
                           )}
@@ -725,28 +726,37 @@ export default function AdminConsignmentsTable({
                             onClick={() => setSelectedJobForModal(job)}
                             className="btn btn-secondary btn-sm"
                             style={{
-                              padding: "0.3rem 0.6rem",
-                              fontSize: "0.72rem",
-                              display: "flex",
+                              padding: "0.25rem 0.45rem",
+                              fontSize: "0.68rem",
+                              display: "inline-flex",
                               alignItems: "center",
-                              gap: "0.25rem",
-                              color: isTransit ? "#38bdf8" : undefined,
-                              borderColor: isTransit ? "rgba(56, 189, 248, 0.4)" : undefined,
-                              background: isTransit ? "rgba(56, 189, 248, 0.1)" : undefined
+                              gap: "0.2rem",
+                              color: isTransit ? "#38bdf8" : "#cbd5e1",
+                              borderColor: isTransit ? "rgba(56, 189, 248, 0.4)" : "rgba(255, 255, 255, 0.1)",
+                              background: isTransit ? "rgba(56, 189, 248, 0.1)" : "rgba(255, 255, 255, 0.04)",
+                              borderRadius: "5px"
                             }}
                             title="Inspect Live Highway Map & Details"
                           >
-                            <Navigation size={12} />
-                            <span>{isTransit ? "Track Live" : "View Map"}</span>
+                            <Navigation size={11} />
+                            <span>{isTransit ? "Live" : "Map"}</span>
                           </button>
 
                           <button
                             onClick={() => setOverrideJob(job)}
                             className="btn btn-secondary btn-sm"
-                            style={{ padding: "0.3rem 0.6rem", fontSize: "0.72rem", display: "flex", alignItems: "center", gap: "0.25rem" }}
+                            style={{
+                              padding: "0.25rem 0.45rem",
+                              fontSize: "0.68rem",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.2rem",
+                              borderRadius: "5px",
+                              color: "#cbd5e1"
+                            }}
                             title="Manual Dispatcher Reassignment"
                           >
-                            <RefreshCw size={12} />
+                            <RefreshCw size={11} />
                             <span>Override</span>
                           </button>
 
@@ -755,18 +765,19 @@ export default function AdminConsignmentsTable({
                               onClick={() => setCancelJob(job)}
                               className="btn btn-secondary btn-sm"
                               style={{
-                                padding: "0.3rem 0.55rem",
-                                fontSize: "0.72rem",
-                                display: "flex",
+                                padding: "0.25rem 0.45rem",
+                                fontSize: "0.68rem",
+                                display: "inline-flex",
                                 alignItems: "center",
-                                gap: "0.25rem",
+                                gap: "0.2rem",
                                 color: "#f87171",
                                 borderColor: "rgba(239, 68, 68, 0.3)",
-                                background: "rgba(239, 68, 68, 0.08)"
+                                background: "rgba(239, 68, 68, 0.08)",
+                                borderRadius: "5px"
                               }}
-                              title="Cancel / Reject Consignment with NHVR Reason Code"
+                              title="Cancel / Reject Consignment"
                             >
-                              <X size={12} />
+                              <X size={11} />
                               <span>Cancel</span>
                             </button>
                           )}
@@ -774,10 +785,16 @@ export default function AdminConsignmentsTable({
                           <button
                             onClick={() => handlePushRoute(job.id, job.driver)}
                             className="btn btn-primary btn-sm"
-                            style={{ padding: "0.3rem 0.6rem", fontSize: "0.72rem", display: "flex", alignItems: "center", gap: "0.25rem" }}
+                            style={{
+                              padding: "0.25rem 0.4rem",
+                              fontSize: "0.68rem",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              borderRadius: "5px"
+                            }}
                             title="Push Telemetry Route to Handset"
                           >
-                            <Send size={12} />
+                            <Send size={11} />
                           </button>
                         </div>
                       </td>
