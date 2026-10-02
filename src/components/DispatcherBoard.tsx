@@ -65,44 +65,62 @@ export default function DispatcherBoard({ jobs, fleet, onJobReassigned }: Dispat
     }
   };
 
-  const handleApproveMatch = async (job: Job) => {
-    let targetDriver = job.driver;
-    let targetVehicle = job.vehicle;
+  // Dispatcher Approval Modal state
+  const [approveJob, setApproveJob] = useState<Job | null>(null);
+  const [approveDriver, setApproveDriver] = useState("Dave Miller (#DRV-104)");
+  const [approveVehicle, setApproveVehicle] = useState("Truck #NL-14 (Mack Titan)");
+  const [isSubmittingApprove, setIsSubmittingApprove] = useState(false);
+
+  const openApproveModal = (job: Job) => {
+    let initialDriver = "Dave Miller (#DRV-104)";
+    let initialVehicle = "Truck #NL-14 (Mack Titan)";
 
     if (job.overrideReason && job.overrideReason.startsWith("RECOMMENDED_MATCH:")) {
       const parts = job.overrideReason.split(":");
       if (parts.length >= 3) {
-        targetVehicle = parts[1];
-        targetDriver = `${parts[2]} (#DRV-AUTO)`;
+        initialVehicle = parts[1];
+        initialDriver = `${parts[2]} (#DRV-101)`;
       }
-    } else if (job.driver.includes("Pending")) {
-      targetDriver = "Dave Miller (#DRV-104)";
-      targetVehicle = "Truck #NL-14 (Mack Titan)";
+    } else if (!job.driver.includes("Pending")) {
+      initialDriver = job.driver;
+      initialVehicle = job.vehicle;
     }
 
+    setApproveJob(job);
+    setApproveDriver(initialDriver);
+    setApproveVehicle(initialVehicle);
+  };
+
+  const handleConfirmApproval = async () => {
+    if (!approveJob) return;
+    setIsSubmittingApprove(true);
+
     try {
-      const res = await fetch(`/api/jobs/${job.id}`, {
+      const res = await fetch(`/api/jobs/${approveJob.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: "Assigned",
-          driver: targetDriver,
-          vehicle: targetVehicle,
-          eta: job.priority === "Express" ? "13:30 ACST (Express)" : "14:45 ACST"
+          driver: approveDriver,
+          vehicle: approveVehicle,
+          eta: approveJob.priority === "Express" ? "13:30 ACST (Express)" : "14:45 ACST"
         })
       });
       const data = await res.json();
       if (data.success && data.job) {
         onJobReassigned(data.job);
         toast.success(
-          `Dispatcher confirmed allocation of ${targetDriver} (${targetVehicle}) to #${job.id}. Manifest dispatched to cab.`,
+          `Dispatcher approved Consignment #${approveJob.id}! Assigned to ${approveDriver} (${approveVehicle}). Manifest dispatched to cab.`,
           "Driver Assignment Approved (FR-02)"
         );
+        setApproveJob(null);
       } else {
         toast.error("Failed to approve assignment", "Error");
       }
     } catch (err: any) {
       toast.error(err.message || "Network error", "Approval Failed");
+    } finally {
+      setIsSubmittingApprove(false);
     }
   };
 
@@ -154,8 +172,8 @@ export default function DispatcherBoard({ jobs, fleet, onJobReassigned }: Dispat
                       alignItems: "center",
                       gap: "0.25rem"
                     }}
-                    onClick={() => handleApproveMatch(job)}
-                    title="CoR Approval Gate: Confirm Driver Match (FR-02)"
+                    onClick={() => openApproveModal(job)}
+                    title="Review & Confirm Driver Allocation (FR-02)"
                   >
                     <CheckCircle2 size={12} />
                     <span>Approve</span>
@@ -271,6 +289,128 @@ export default function DispatcherBoard({ jobs, fleet, onJobReassigned }: Dispat
               </button>
               <button className="btn btn-primary btn-sm" onClick={handleConfirmOverride}>
                 Confirm Reassignment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dispatcher Approval & Driver/Vehicle Allocation Modal */}
+      {approveJob && (
+        <div className="modal-backdrop" style={{ zIndex: 10002 }}>
+          <div
+            className="modal-dialog"
+            style={{
+              maxWidth: "540px",
+              background: "linear-gradient(180deg, #1e293b, #0f172a)",
+              border: "1px solid rgba(52, 211, 153, 0.4)",
+              borderRadius: "14px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.8)",
+              color: "#f8fafc"
+            }}
+          >
+            <div className="modal-header">
+              <div className="flex-align" style={{ gap: "0.5rem" }}>
+                <CheckCircle2 size={18} color="#34d399" />
+                <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Approve & Dispatch #{approveJob.id}</h3>
+              </div>
+              <button className="btn-close" onClick={() => setApproveJob(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+              <div
+                style={{
+                  background: "rgba(15, 23, 42, 0.7)",
+                  padding: "0.75rem",
+                  borderRadius: "8px",
+                  fontSize: "0.8rem",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "0.5rem"
+                }}
+              >
+                <div><span className="text-muted">Customer:</span> <strong>{approveJob.customer}</strong></div>
+                <div><span className="text-muted">Priority:</span> <strong className="text-primary">{approveJob.priority}</strong></div>
+                <div style={{ gridColumn: "span 2" }}><span className="text-muted">Route:</span> {approveJob.pickup.split('(')[0]} → {approveJob.dropoff.split('(')[0]}</div>
+                <div style={{ gridColumn: "span 2" }}><span className="text-muted">Cargo:</span> {approveJob.goods}</div>
+              </div>
+
+              <div
+                style={{
+                  background: "rgba(56, 189, 248, 0.1)",
+                  border: "1px solid rgba(56, 189, 248, 0.3)",
+                  padding: "0.6rem 0.8rem",
+                  borderRadius: "8px",
+                  fontSize: "0.78rem"
+                }}
+              >
+                <div style={{ color: "#38bdf8", fontWeight: 700, marginBottom: "2px" }}>Algorithm Nearest-Depot Match:</div>
+                <div>{approveJob.vehicle.replace("Suggested: ", "")}</div>
+              </div>
+
+              <div className="form-group">
+                <label style={{ fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "4px", display: "block" }}>
+                  Confirm or Change Linehaul Unit & Driver:
+                </label>
+                <select
+                  value={approveDriver}
+                  onChange={(e) => {
+                    const drv = e.target.value;
+                    setApproveDriver(drv);
+                    if (drv.includes("Liam Chen")) setApproveVehicle("Van #NL-01 (HiAce Courier)");
+                    else if (drv.includes("Dave Miller")) setApproveVehicle("Truck #NL-14 (Mack Titan)");
+                    else if (drv.includes("Sarah Peterson")) setApproveVehicle("Rigid #NL-08 (Hino 500)");
+                    else if (drv.includes("Samira Patel")) setApproveVehicle("Rigid #NL-06 (Fuso Fighter)");
+                    else if (drv.includes("Wayne Campbell")) setApproveVehicle("Semi #NL-11 (Volvo FM)");
+                    else if (drv.includes("Mark Taylor")) setApproveVehicle("Road Train #NL-31 (Kenworth T909)");
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "0.55rem 0.75rem",
+                    borderRadius: "6px",
+                    background: "#0f172a",
+                    color: "#f8fafc",
+                    border: "1px solid rgba(56, 189, 248, 0.4)",
+                    fontSize: "0.82rem"
+                  }}
+                >
+                  <option value="Liam Chen (#DRV-101)">Liam Chen (#DRV-101) — Van #NL-01 (HiAce Courier, Darwin)</option>
+                  <option value="Dave Miller (#DRV-104)">Dave Miller (#DRV-104) — Truck #NL-14 (Mack Titan, Katherine)</option>
+                  <option value="Sarah Peterson (#DRV-108)">Sarah Peterson (#DRV-108) — Rigid #NL-08 (Hino 500, Darwin)</option>
+                  <option value="Samira Patel (#DRV-106)">Samira Patel (#DRV-106) — Rigid #NL-06 (Fuso Fighter, Darwin)</option>
+                  <option value="Wayne Campbell (#DRV-111)">Wayne Campbell (#DRV-111) — Semi #NL-11 (Volvo FM, Katherine)</option>
+                  <option value="Mark Taylor (#DRV-112)">Mark Taylor (#DRV-112) — Road Train #NL-31 (Kenworth, Alice Springs)</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#94a3b8", padding: "0.4rem 0.6rem", background: "rgba(255, 255, 255, 0.03)", borderRadius: "4px" }}>
+                <span>Allocated Vehicle:</span>
+                <strong style={{ color: "#38bdf8" }}>{approveVehicle}</strong>
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setApproveJob(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-sm"
+                disabled={isSubmittingApprove}
+                onClick={handleConfirmApproval}
+                style={{
+                  background: "linear-gradient(135deg, #059669, #10b981)",
+                  border: "1px solid #34d399",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem"
+                }}
+              >
+                <CheckCircle2 size={13} />
+                <span>{isSubmittingApprove ? "Allocating..." : "Confirm & Dispatch Linehaul"}</span>
               </button>
             </div>
           </div>

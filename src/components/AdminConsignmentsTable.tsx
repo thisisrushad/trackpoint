@@ -63,6 +63,12 @@ export default function AdminConsignmentsTable({
   const [cancelReasonCode, setCancelReasonCode] = useState("WEATHER_ROAD_CLOSURE");
   const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
+  // Dedicated Approval & Dispatch Allocation Modal
+  const [approveModalJob, setApproveModalJob] = useState<Job | null>(null);
+  const [approveSelectedDriver, setApproveSelectedDriver] = useState("Dave Miller (#DRV-104)");
+  const [approveSelectedVehicle, setApproveSelectedVehicle] = useState("Truck #NL-14 (Mack Titan)");
+  const [isSubmittingApprove, setIsSubmittingApprove] = useState(false);
+
   // KPI Calculations
   const stats = useMemo(() => {
     const total = jobs.length;
@@ -125,45 +131,57 @@ export default function AdminConsignmentsTable({
     toast.info(`Consignment #${jobId} route map sent to handset of ${driverName}.`, "Route Pushed");
   };
 
-  const handleApproveJob = async (job: Job) => {
-    // Parse recommended vehicle/driver if available
-    let targetDriver = job.driver;
-    let targetVehicle = job.vehicle;
+  const handleApproveJob = (job: Job) => {
+    // Determine suggested driver and vehicle
+    let initialDriver = "Dave Miller (#DRV-104)";
+    let initialVehicle = "Truck #NL-14 (Mack Titan)";
 
     if (job.overrideReason && job.overrideReason.startsWith("RECOMMENDED_MATCH:")) {
       const parts = job.overrideReason.split(":");
       if (parts.length >= 3) {
-        targetVehicle = parts[1];
-        targetDriver = `${parts[2]} (#DRV-AUTO)`;
+        initialVehicle = parts[1];
+        initialDriver = `${parts[2]} (#DRV-101)`;
       }
-    } else if (job.driver.includes("Pending")) {
-      targetDriver = "Dave Miller (#DRV-104)";
-      targetVehicle = "Truck #NL-14 (Mack Titan)";
+    } else if (!job.driver.includes("Pending")) {
+      initialDriver = job.driver;
+      initialVehicle = job.vehicle;
     }
 
+    setApproveModalJob(job);
+    setApproveSelectedDriver(initialDriver);
+    setApproveSelectedVehicle(initialVehicle);
+  };
+
+  const handleConfirmApproveModal = async () => {
+    if (!approveModalJob) return;
+    setIsSubmittingApprove(true);
+
     try {
-      const res = await fetch(`/api/jobs/${job.id}`, {
+      const res = await fetch(`/api/jobs/${approveModalJob.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: "Assigned",
-          driver: targetDriver,
-          vehicle: targetVehicle,
-          eta: job.priority === "Express" ? "13:30 ACST (Express)" : "14:45 ACST"
+          driver: approveSelectedDriver,
+          vehicle: approveSelectedVehicle,
+          eta: approveModalJob.priority === "Express" ? "13:30 ACST (Express)" : "14:45 ACST"
         })
       });
       const data = await res.json();
       if (data.success && data.job) {
         onJobUpdated(data.job);
         toast.success(
-          `Consignment #${job.id} approved by Dispatcher! Allocated to ${targetVehicle} (${targetDriver}).`,
-          "Booking Approved & Dispatched"
+          `Consignment #${approveModalJob.id} confirmed! Assigned to ${approveSelectedDriver} (${approveSelectedVehicle}).`,
+          "Allocation Approved & Dispatched (FR-02)"
         );
+        setApproveModalJob(null);
       } else {
         toast.error("Failed to approve consignment in database.", "Error");
       }
     } catch (err: any) {
       toast.error(err.message || "Network error", "Approval Failed");
+    } finally {
+      setIsSubmittingApprove(false);
     }
   };
 
@@ -1040,6 +1058,215 @@ export default function AdminConsignmentsTable({
               >
                 <X size={13} />
                 <span>{isSubmittingCancel ? "Cancelling..." : "Confirm Cancellation"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Dedicated Dispatcher Approval & Vehicle/Driver Allocation Modal */}
+      {approveModalJob && (
+        <div className="modal-backdrop" style={{ zIndex: 10002 }}>
+          <div
+            className="modal-dialog"
+            style={{
+              maxWidth: "580px",
+              background: "linear-gradient(180deg, #1e293b, #0f172a)",
+              border: "1px solid rgba(52, 211, 153, 0.4)",
+              borderRadius: "14px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.85)",
+              color: "#f8fafc"
+            }}
+          >
+            <div
+              className="modal-header"
+              style={{
+                padding: "1.1rem 1.35rem",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    background: "rgba(16, 185, 129, 0.2)",
+                    color: "#34d399",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  <CheckCircle2 size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>
+                    Approve & Allocate Consignment #{approveModalJob.id}
+                  </h3>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                    Chain of Responsibility Dispatch Approval (FR-01, FR-02)
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setApproveModalJob(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: "1.35rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {/* Consignment Specs Summary Card */}
+              <div
+                style={{
+                  background: "rgba(15, 23, 42, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: "10px",
+                  padding: "0.85rem 1rem",
+                  fontSize: "0.8rem",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "0.65rem"
+                }}
+              >
+                <div>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "0.7rem", textTransform: "uppercase" }}>Customer</span>
+                  <strong style={{ color: "#f8fafc" }}>{approveModalJob.customer}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "0.7rem", textTransform: "uppercase" }}>Priority</span>
+                  <span style={{ color: approveModalJob.priority === "Express" ? "#f87171" : "#38bdf8", fontWeight: 700 }}>
+                    {approveModalJob.priority} Linehaul
+                  </span>
+                </div>
+                <div style={{ gridColumn: "span 2" }}>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "0.7rem", textTransform: "uppercase" }}>Cargo / Goods</span>
+                  <span style={{ color: "#cbd5e1" }}>📦 {approveModalJob.goods}</span>
+                </div>
+                <div style={{ gridColumn: "span 2" }}>
+                  <span style={{ color: "#94a3b8", display: "block", fontSize: "0.7rem", textTransform: "uppercase" }}>Freight Corridor</span>
+                  <span style={{ color: "#93c5fd" }}>📍 {approveModalJob.pickup.split('(')[0]} → {approveModalJob.dropoff.split('(')[0]}</span>
+                </div>
+              </div>
+
+              {/* Algorithm Recommendation Banner */}
+              <div
+                style={{
+                  background: "rgba(56, 189, 248, 0.08)",
+                  border: "1px solid rgba(56, 189, 248, 0.25)",
+                  borderRadius: "8px",
+                  padding: "0.75rem 0.9rem",
+                  fontSize: "0.78rem",
+                  color: "#e2e8f0"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#38bdf8", fontWeight: 700, marginBottom: "3px" }}>
+                  <Zap size={14} />
+                  <span>Algorithm Nearest-Depot Match (Suggested):</span>
+                </div>
+                <div style={{ fontSize: "0.82rem", color: "#f8fafc" }}>
+                  {approveModalJob.vehicle.replace("Suggested: ", "")}
+                </div>
+              </div>
+
+              {/* Driver & Vehicle Selection Dropdown */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.76rem", color: "#cbd5e1", marginBottom: "5px", fontWeight: 600 }}>
+                  Dispatcher Allocation (Confirm or Select Different Driver/Unit):
+                </label>
+                <select
+                  value={approveSelectedDriver}
+                  onChange={(e) => {
+                    const drv = e.target.value;
+                    setApproveSelectedDriver(drv);
+                    if (drv.includes("Liam Chen")) setApproveSelectedVehicle("Van #NL-01 (HiAce Courier)");
+                    else if (drv.includes("Dave Miller")) setApproveSelectedVehicle("Truck #NL-14 (Mack Titan)");
+                    else if (drv.includes("Sarah Peterson")) setApproveSelectedVehicle("Rigid #NL-08 (Hino 500)");
+                    else if (drv.includes("Samira Patel")) setApproveSelectedVehicle("Rigid #NL-06 (Fuso Fighter)");
+                    else if (drv.includes("Wayne Campbell")) setApproveSelectedVehicle("Semi #NL-11 (Volvo FM)");
+                    else if (drv.includes("Brett Walker")) setApproveSelectedVehicle("Semi #NL-09 (Freightliner)");
+                    else if (drv.includes("Mark Taylor")) setApproveSelectedVehicle("Road Train #NL-31 (Kenworth T909)");
+                    else if (drv.includes("Ian Stewart")) setApproveSelectedVehicle("Road Train #NL-29 (Kenworth C509)");
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "0.6rem 0.85rem",
+                    borderRadius: "8px",
+                    background: "#0f172a",
+                    color: "#f8fafc",
+                    border: "1px solid rgba(56, 189, 248, 0.4)",
+                    fontSize: "0.85rem",
+                    fontWeight: 600
+                  }}
+                >
+                  <option value="Liam Chen (#DRV-101)">Liam Chen (#DRV-101) — Van #NL-01 (HiAce Courier, Darwin Metro)</option>
+                  <option value="Dave Miller (#DRV-104)">Dave Miller (#DRV-104) — Truck #NL-14 (Mack Titan, Katherine)</option>
+                  <option value="Sarah Peterson (#DRV-108)">Sarah Peterson (#DRV-108) — Rigid #NL-08 (Hino 500, Darwin Metro)</option>
+                  <option value="Samira Patel (#DRV-106)">Samira Patel (#DRV-106) — Rigid #NL-06 (Fuso Fighter, Darwin Metro)</option>
+                  <option value="Wayne Campbell (#DRV-111)">Wayne Campbell (#DRV-111) — Semi #NL-11 (Volvo FM, Katherine Depot)</option>
+                  <option value="Brett Walker (#DRV-109)">Brett Walker (#DRV-109) — Semi #NL-09 (Freightliner, Darwin Metro)</option>
+                  <option value="Mark Taylor (#DRV-112)">Mark Taylor (#DRV-112) — Road Train #NL-31 (Kenworth T909, Alice Springs)</option>
+                  <option value="Ian Stewart (#DRV-129)">Ian Stewart (#DRV-129) — Road Train #NL-29 (Kenworth C509, Alice Springs)</option>
+                </select>
+              </div>
+
+              {/* Confirm Allocated Vehicle readout */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.75rem", background: "rgba(255, 255, 255, 0.03)", borderRadius: "6px", fontSize: "0.75rem" }}>
+                <span style={{ color: "#94a3b8" }}>Target Heavy Unit:</span>
+                <strong style={{ color: "#38bdf8" }}>{approveSelectedVehicle}</strong>
+              </div>
+            </div>
+
+            <div
+              className="modal-footer"
+              style={{
+                padding: "0.9rem 1.35rem",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.6rem"
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setApproveModalJob(null)}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: "0.78rem", padding: "0.45rem 0.95rem" }}
+              >
+                Review Later
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingApprove}
+                onClick={handleConfirmApproveModal}
+                className="btn btn-sm"
+                style={{
+                  fontSize: "0.78rem",
+                  padding: "0.45rem 1.15rem",
+                  background: "linear-gradient(135deg, #059669, #10b981)",
+                  border: "1px solid #34d399",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  boxShadow: "0 2px 10px rgba(16, 185, 129, 0.35)"
+                }}
+              >
+                <CheckCircle2 size={14} />
+                <span>{isSubmittingApprove ? "Allocating..." : "Confirm Allocation & Dispatch"}</span>
               </button>
             </div>
           </div>
