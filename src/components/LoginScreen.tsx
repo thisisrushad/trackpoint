@@ -4,13 +4,13 @@ import React, { useState } from "react";
 import { Truck, ShieldCheck, Users, Smartphone, Lock, ArrowRight, CheckCircle2 } from "lucide-react";
 
 interface LoginScreenProps {
-  onLogin: (role: "customer" | "admin" | "driver", userProfile: { name: string; org: string; email: string }) => void;
+  onLogin: (role: "customer" | "admin" | "driver" | "qc", userProfile: { name: string; org: string; email: string }) => void;
 }
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [email, setEmail] = useState("sandra.wilson@katherinemining.com.au");
   const [password, setPassword] = useState("••••••••••••");
-  const [selectedRole, setSelectedRole] = useState<"customer" | "admin" | "driver">("customer");
+  const [selectedRole, setSelectedRole] = useState<"customer" | "admin" | "driver" | "qc">("customer");
 
   const handleCustomLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +26,12 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         org: "NorthLine Darwin Ops (Admin #S395312)",
         email: "mahir.sadman17@gmail.com"
       });
+    } else if (selectedRole === "qc") {
+      onLogin("qc", {
+        name: "Marcus Vance",
+        org: "NorthLine Receiving Dock Quality Assurance",
+        email: "qc.receiving@northline.com.au"
+      });
     } else {
       onLogin("driver", {
         name: "Dave Miller",
@@ -35,7 +41,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     }
   };
 
-  const handleQuickPersona = (role: "customer" | "admin" | "driver") => {
+  const handleQuickPersona = (role: "customer" | "admin" | "driver" | "qc") => {
     if (role === "customer") {
       onLogin("customer", {
         name: "Sandra Wilson",
@@ -47,6 +53,12 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         name: "Mahir Sadman",
         org: "NorthLine Darwin Ops (Admin #S395312)",
         email: "mahir.sadman17@gmail.com"
+      });
+    } else if (role === "qc") {
+      onLogin("qc", {
+        name: "Marcus Vance",
+        org: "NorthLine Receiving Dock Quality Assurance",
+        email: "qc.receiving@northline.com.au"
       });
     } else {
       onLogin("driver", {
@@ -112,6 +124,22 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
             <button
               type="button"
+              className={`persona-card ${selectedRole === "qc" ? "selected" : ""}`}
+              onClick={() => { setSelectedRole("qc"); handleQuickPersona("qc"); }}
+            >
+              <div className="persona-icon qc">
+                <CheckCircle2 size={20} />
+              </div>
+              <div className="persona-details">
+                <strong>Marcus Vance</strong>
+                <span>Receiving Dock QC Team</span>
+                <small className="text-muted">Cargo Seals & Inspection</small>
+              </div>
+              <ArrowRight size={16} className="persona-arrow" />
+            </button>
+
+            <button
+              type="button"
               className={`persona-card ${selectedRole === "driver" ? "selected" : ""}`}
               onClick={() => { setSelectedRole("driver"); handleQuickPersona("driver"); }}
             >
@@ -166,6 +194,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               >
                 <option value="customer">Customer Self-Service Portal (Sandra Wilson)</option>
                 <option value="admin">Dispatcher & Fleet Admin Board (Priya Sharma)</option>
+                <option value="qc">Receiving Dock QC Dashboard (Marcus Vance)</option>
                 <option value="driver">Driver Mobile Application (Dave Miller)</option>
               </select>
             </div>

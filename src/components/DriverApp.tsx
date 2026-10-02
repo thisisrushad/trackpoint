@@ -215,17 +215,19 @@ export default function DriverApp({
 
             {activeJob.status !== "QC Passed" && activeJob.status !== "Delivered" && (
               <div style={{
-                background: "rgba(245, 158, 11, 0.15)",
-                border: "1px solid rgba(245, 158, 11, 0.4)",
+                background: activeJob.status === "QC Failed" ? "rgba(225, 29, 72, 0.15)" : "rgba(245, 158, 11, 0.15)",
+                border: activeJob.status === "QC Failed" ? "1px solid rgba(244, 63, 94, 0.4)" : "1px solid rgba(245, 158, 11, 0.4)",
                 padding: "0.5rem 0.75rem",
                 borderRadius: "8px",
                 fontSize: "0.72rem",
-                color: "#fcd34d",
+                color: activeJob.status === "QC Failed" ? "#fda4af" : "#fcd34d",
                 marginBottom: "0.75rem"
               }}>
-                {activeJob.status === "Arrived"
-                  ? "🛡️ Status: Arrived. Quality inspection pending by Admin/Depot. Signature unlocks once marked 'QC Passed'."
-                  : "⚠️ Consignment in transit. Must arrive and pass Admin QC before e-POD can be signed."}
+                {activeJob.status === "QC Failed"
+                  ? "❌ Inspection FAILED by QC Team. Escalated to Admin. e-POD signing is strictly locked."
+                  : activeJob.status === "Arrived"
+                  ? "🛡️ Status: Arrived. Quality inspection pending by QC Team. Signature unlocks once marked 'QC Passed'."
+                  : "⚠️ Consignment in transit. Must arrive and pass QC before e-POD can be signed."}
               </div>
             )}
 

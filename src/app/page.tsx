@@ -29,7 +29,7 @@ export default function LoginPage() {
   // Sign In State
   const [email, setEmail] = useState("sandra.wilson@katherinemining.com.au");
   const [password, setPassword] = useState("••••••••••••");
-  const [selectedRole, setSelectedRole] = useState<"customer" | "admin" | "driver">("customer");
+  const [selectedRole, setSelectedRole] = useState<"customer" | "admin" | "driver" | "qc">("customer");
   const [selectedDriverEmail, setSelectedDriverEmail] = useState("d.miller@northline.com.au");
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -48,7 +48,7 @@ export default function LoginPage() {
     creditTerms: "14 Days Net"
   });
 
-  const performLogin = async (role: "customer" | "admin" | "driver", userEmail: string) => {
+  const performLogin = async (role: "customer" | "admin" | "driver" | "qc", userEmail: string) => {
     setIsLoading(true);
     setAuthError("");
     try {
@@ -66,6 +66,8 @@ export default function LoginPage() {
           router.push("/customer");
         } else if (role === "admin") {
           router.push("/admin");
+        } else if (role === "qc") {
+          router.push("/qc");
         } else if (role === "driver") {
           router.push("/driver");
         }
@@ -290,6 +292,23 @@ export default function LoginPage() {
                     <ArrowRight size={16} className="persona-arrow" />
                   </button>
 
+                  <button
+                    type="button"
+                    className={`persona-card ${selectedRole === "qc" ? "selected" : ""}`}
+                    onClick={() => performLogin("qc", "qc.receiving@northline.com.au")}
+                    disabled={isLoading}
+                  >
+                    <div className="persona-icon qc">
+                      <CheckCircle2 size={20} />
+                    </div>
+                    <div className="persona-details">
+                      <strong>Receiving Dock QC Team</strong>
+                      <span>Marcus Vance (Inspector)</span>
+                      <small className="text-muted">Dock Seal & Cold-Chain Certification</small>
+                    </div>
+                    <ArrowRight size={16} className="persona-arrow" />
+                  </button>
+
                   <div className={`persona-card ${selectedRole === "driver" ? "selected" : ""}`} style={{ flexDirection: "column", alignItems: "stretch", gap: "0.5rem" }}>
                     <div
                       className="flex items-center justify-between cursor-pointer"
@@ -389,6 +408,7 @@ export default function LoginPage() {
                     >
                       <option value="customer">Customer Portal (Sandra Wilson)</option>
                       <option value="admin">Dispatcher / Admin Portal (Priya Sharma)</option>
+                      <option value="qc">Receiving Dock QC Dashboard (Marcus Vance)</option>
                       <optgroup label="Driver Mobile Handset Accounts">
                         {DRIVER_ACCOUNTS.map((drv) => (
                           <option key={drv.id} value={`driver:${drv.email}`}>

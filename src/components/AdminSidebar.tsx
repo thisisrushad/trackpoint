@@ -69,6 +69,13 @@ export default function AdminSidebar({
       badgeColor: "#38bdf8"
     },
     {
+      href: "/qc",
+      label: "Receiving Dock QC",
+      icon: <ShieldCheck size={19} />,
+      badge: "Inspection",
+      badgeColor: "#c084fc"
+    },
+    {
       href: "/admin/dispatch",
       label: "Dispatcher Board",
       icon: <LayoutGrid size={19} />,

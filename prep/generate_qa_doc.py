@@ -262,42 +262,46 @@ def generate_qa_doc(output_path="prep/TrackPoint_Teacher_QA_Defense_Guide.docx")
     )
 
     # ---------------- SECTION 3 ----------------
-    add_section_header("Section 3: Consignment Lifecycle & The Dock QC / e-POD Workflow", "Deep dive into your latest feature: Arrived status, quality inspections, and digital signatures.")
+    add_section_header("Section 3: Consignment Lifecycle & Dedicated QC Dashboard Workflow", "Deep dive into your latest feature: Separate QC Dashboard, Arrived status, QC Passed vs QC Failed, and driver e-POD locking.")
 
     add_qa(
         5,
-        "Walk me through the exact state machine of a consignment. Why can't a driver sign an e-POD or mark 'Delivered' while still in transit?",
-        "Core Business Logic & State Machine",
+        "Walk me through the exact state machine of a consignment. Why can't a driver sign an e-POD or mark 'Delivered' while still in transit or before QC approval?",
+        "Core Business Logic & Segregation of Duties",
         "The teacher wants to see if you understand realistic industrial processes versus simplistic CRUD apps.",
-        "In commercial road transport and legal Chain of Responsibility (CoR), a driver signing off or marking 'Delivered' while 500 km away on the highway is illegal fraud. TrackPoint strictly prevents this:\n"
+        "In commercial heavy road transport and legal Chain of Responsibility (CoR), a driver signing off or marking 'Delivered' while 500 km away on the highway—or before receiving dock inspection—is illegal fraud. TrackPoint strictly enforces a 6-stage lifecycle with Segregation of Duties (SoD):\n"
         "1. Booked: Order placed by customer; queued for operational allocation.\n"
         "2. Assigned: Dispatcher reviews driver hours and assigns linehaul unit.\n"
         "3. In Transit: Truck journeys down Stuart Highway. The e-POD signature pad is strictly LOCKED with an active warning banner. Premature delivery submission is blocked at both client and API validation.\n"
-        "4. Arrived: When coordinates reach the destination receiving bay (or when the driver/dispatcher confirms dock arrival), speed drops to 0 km/h and status becomes 'Arrived' (distinct purple status). The driver STILL cannot finalize delivery alone.\n"
-        "5. Delivered: An authorized receiving supervisor or dispatcher must manually conduct the Quality Check (bolt security seal check, reefer temperature verify at +4°C, damage inspection) and capture the consignee digital signature. Only upon passing QC is the status manually finalized to 'Delivered', releasing the official e-POD and automated tax invoice.",
-        ["Deterministic state machine", "Transit e-POD lockout", "Dock receiving state (Arrived)", "Manual QC verification", "Bolt seal check", "Cold-chain temperature verification", "Legal e-POD sign-off", "Automated invoice release"]
+        "4. Arrived: When coordinates reach the destination receiving bay, speed drops to 0 km/h and status becomes 'Arrived' (distinct purple status). The driver STILL cannot sign e-POD.\n"
+        "5. QC Inspection (Dedicated QC Dashboard): A separate Quality Control inspection team (Marcus Vance) inspects the arrived shipment at /qc. If seals, temperature (+4°C), and packaging pass, QC approves 'QC Passed'. If seals are tampered or reefer breached, QC flags 'QC Failed', alerting Operations Admin for formal investigation.\n"
+        "6. Delivered: Only AFTER status is 'QC Passed' does the driver's signature pad unlock. Consignee signs on the touchscreen, photos are attached, and delivery transitions to 'Delivered', releasing the official e-POD and automated tax invoice.",
+        ["Segregation of Duties (SoD)", "Dedicated QC Dashboard (/qc)", "Transit e-POD lockout", "Dock receiving state (Arrived)", "QC Passed vs QC Failed", "Bolt seal check", "Cold-chain temperature verification", "Automated invoice release"]
     )
 
     add_qa(
         6,
-        "How does the automated destination arrival detection work on the map?",
-        "Telematics & Map Integration",
-        "Testing whether your Leaflet map is just a pretty picture or if it actively drives system business events.",
-        "In src/components/MapView.tsx, the truck does not move randomly; it interpolates coordinates along Stuart Highway vector waypoints (Darwin -> Katherine -> Alice Springs). When the normalized travel progress reaches 1.0 (the destination receiving dock), the speed indicator settles at 0 km/h and the component fires the `onArrival()` callback. This triggers an automated state transition in AdminConsignmentModal to update the consignment status to 'Arrived', logs a timestamped milestone in the audit trail, and lights up the 'QC & e-POD Sign-off' button.",
-        ["Waypoint vector interpolation", "onArrival callback", "Destination geofencing", "Audit trail timestamping", "Speed telemetry 0 km/h"]
+        "Why did you create a separate QC Dashboard (/qc) instead of letting drivers or admins handle inspections in the same window?",
+        "Architecture & Segregation of Duties (SoD)",
+        "The evaluator is testing your understanding of compliance, security boundaries, and enterprise role separation.",
+        "Allowing drivers to inspect their own cargo or approve their own deliveries creates a massive conflict of interest and violates ISO-9001 and CoR compliance. We created a dedicated QC Dashboard (/qc) specifically for the Receiving Dock Quality Team for three major reasons:\n"
+        "1. Segregation of Duties (SoD): The person who transports the freight (driver) CANNOT certify the quality or approve the proof of delivery. A distinct dock inspector must verify physical container integrity.\n"
+        "2. Focused Operational Workspace: Receiving dock inspectors only care about arrived trucks at their bays, seal numbers, reefer temps, and defect logging. They don't need dispatcher route-reassignment clutter.\n"
+        "3. Immediate Admin Escalation: If a load is compromised (crushed pallets, warm reefer, tampered seal), the QC team flags it as 'QC Failed' with structured reason codes. This immediately flags on the Admin Consignments board with a prominent red badge, freezing delivery until depot management investigates.",
+        ["Segregation of Duties (SoD)", "Dedicated QC Dashboard", "ISO-9001 compliance", "Conflict of interest prevention", "Automated Admin escalation", "Structured failure codes"]
     )
 
     add_qa(
         7,
-        "What specific checks happen during the QC & e-POD Sign-off modal?",
-        "Industrial Quality Assurance",
+        "What specific checks happen during the QC verification, and what happens if a consignment fails QC?",
+        "Industrial Quality Assurance & Defect Handling",
         "Evaluating your domain depth in quality control and chain of custody.",
-        "The QC & e-POD modal enforces three critical industrial standards before releasing custody:\n"
-        "1. Bolt Security Seal Verification: Validates that the high-security bolt seal (e.g., #NT-89422-SEC) is intact and unbroken, proving no freight tampering occurred across the outback.\n"
-        "2. Cold-Chain & Reefer Temperature Check: Validates that refrigerated cargo remained within the legal threshold (+4°C) to prevent spoiled perishables.\n"
-        "3. Packaging & Cargo Integrity: Confirms zero load shift, puncture, or strap failure.\n"
-        "4. Legal Consignee Sign-off: Captures receiver full name, role, and digital touchscreen signature, embedding them into a non-repudiable electronic Proof of Delivery docket.",
-        ["Bolt seal integrity", "Cold-chain setpoint (+4°C)", "Load shift inspection", "Non-repudiable signature", "Electronic Proof of Delivery (e-POD)"]
+        "The QC inspection enforces three non-negotiable checks at the receiving dock:\n"
+        "1. Security Container Bolt Seal Check: Validates that high-security tamper seals match shipping manifests (#NT-89422-SEC). If broken, flagged as SEAL_TAMPERED.\n"
+        "2. Cold-Chain & Reefer Temperature Check: Validates that perishable goods remained within legal thresholds (+4°C). If breached, flagged as COLD_CHAIN_BREACH.\n"
+        "3. Packaging & Pallet Structural Integrity: Verifies zero outer pallet crushing, water ingress, or load shifts. If damaged, flagged as PHYSICAL_CARGO_DAMAGE.\n"
+        "If all pass, status updates to 'QC Passed' and the driver's handset unlocks for signature. If any check fails, status becomes 'QC Failed', recording inspector name, dock bay, timestamp, and audit notes into MongoDB, immediately alerting Operations Admin.",
+        ["Bolt seal integrity", "Cold-chain setpoint (+4°C)", "Load shift inspection", "QC Failed escalation", "Non-repudiable audit log"]
     )
 
     # ---------------- SECTION 4 ----------------

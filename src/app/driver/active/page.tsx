@@ -218,6 +218,7 @@ function DriverActiveRunContent() {
 
   const isDelivered = job.status === "Delivered" || job.status === "Invoiced";
   const isQcPassed = job.status === "QC Passed";
+  const isQcFailed = job.status === "QC Failed";
   const isArrived = job.status === "Arrived";
   const isInTransit = job.status === "In Transit";
   const isAssigned = job.status === "Assigned" || job.status === "Booked";
@@ -246,6 +247,8 @@ function DriverActiveRunContent() {
                   ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
                   : isQcPassed
                   ? "bg-sky-500/20 text-sky-300 border-sky-500/40"
+                  : isQcFailed
+                  ? "bg-rose-500/20 text-rose-300 border-rose-500/50"
                   : isArrived
                   ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
                   : isInTransit
@@ -354,7 +357,7 @@ function DriverActiveRunContent() {
               <div className="bg-purple-500/15 border border-purple-500/40 rounded-xl p-3.5 flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-2 text-purple-300 text-xs font-bold">
                   <Clock size={16} />
-                  <span>Vehicle Docked at Receiving Bay — Awaiting Admin / Depot QC Approval (QC Passed)</span>
+                  <span>Vehicle Docked at Receiving Bay — Awaiting Receiving Dock QC Approval (QC Passed)</span>
                 </div>
                 <button
                   type="button"
@@ -367,6 +370,8 @@ function DriverActiveRunContent() {
                         setJob(data.job);
                         if (data.job.status === "QC Passed") {
                           toast.success("QC has been approved by Operations! Signature pad is now unlocked.", "QC Passed");
+                        } else if (data.job.status === "QC Failed") {
+                          toast.error("Quality Check was flagged as FAILED by dock inspector. Awaiting Admin review.", "QC Failed");
                         } else {
                           toast.info("Status is still awaiting QC approval by Admin/Depot Inspector.", "QC In Progress");
                         }
@@ -380,6 +385,22 @@ function DriverActiveRunContent() {
                   className="py-2 px-3.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md transition cursor-pointer"
                 >
                   Check QC Status 🔄
+                </button>
+              </div>
+            )}
+
+            {isQcFailed && (
+              <div className="bg-rose-500/15 border border-rose-500/40 rounded-xl p-3.5 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2 text-rose-300 text-xs font-bold">
+                  <ShieldCheck size={16} className="text-rose-400" />
+                  <span>QC Inspection FAILED — Consignment blocked for delivery. Awaiting Operations Admin review.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toast.info("Operations dispatch center has been notified of the QC failure hold.", "Admin Alerted")}
+                  className="py-2 px-3.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/40 border border-rose-500/40 text-rose-200 font-bold text-xs shadow-md transition cursor-pointer"
+                >
+                  Escalate to Admin ⚠️
                 </button>
               </div>
             )}

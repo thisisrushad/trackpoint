@@ -9,7 +9,7 @@ export interface IJob {
   priority: "Standard" | "Express";
   driver: string;
   vehicle: string;
-  status: "Booked" | "Assigned" | "In Transit" | "Arrived" | "QC Passed" | "Delivered" | "Invoiced" | "Cancelled";
+  status: "Booked" | "Assigned" | "In Transit" | "Arrived" | "QC Passed" | "QC Failed" | "Delivered" | "Invoiced" | "Cancelled";
   eta: string;
   lat: number;
   lng: number;
@@ -34,7 +34,7 @@ const JobSchema = new Schema<IJob>(
     vehicle: { type: String, required: true },
     status: {
       type: String,
-      enum: ["Booked", "Assigned", "In Transit", "Arrived", "QC Passed", "Delivered", "Invoiced", "Cancelled"],
+      enum: ["Booked", "Assigned", "In Transit", "Arrived", "QC Passed", "QC Failed", "Delivered", "Invoiced", "Cancelled"],
       default: "Assigned"
     },
     eta: { type: String, default: "14:45 ACST" },

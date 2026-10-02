@@ -19,6 +19,13 @@ export const DEMO_USERS: Record<string, JWTPayload> = {
     role: "admin",
     org: "NorthLine Darwin Depot Ops (S395312)"
   },
+  qc: {
+    userId: "USR-004",
+    email: "qc.receiving@northline.com.au",
+    name: "Marcus Vance",
+    role: "qc",
+    org: "NorthLine Receiving Dock Quality Assurance"
+  },
   driver: {
     userId: "USR-003",
     email: "d.miller@northline.com.au",
@@ -54,7 +61,7 @@ export class AuthService {
     }
 
     // Match or create from demo personas
-    const matchedRole = (role as "customer" | "admin" | "driver") || "customer";
+    const matchedRole = (role as "customer" | "admin" | "driver" | "qc") || "customer";
 
     if (matchedRole === "driver" || email?.includes("@northline.com.au") || role === "driver") {
       const driverAcc = (email ? getDriverByEmail(email) : undefined) || DRIVER_ACCOUNTS[0];

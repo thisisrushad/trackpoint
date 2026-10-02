@@ -213,6 +213,7 @@ body {
 
 .persona-icon.customer { background: rgba(2, 132, 199, 0.2); color: #38bdf8; }
 .persona-icon.admin { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
+.persona-icon.qc { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
 .persona-icon.driver { background: rgba(16, 185, 129, 0.2); color: #34d399; }
 
 .persona-details {
@@ -809,6 +810,12 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus {
   background: rgba(14, 165, 233, 0.22);
   color: #7dd3fc;
   border: 1px solid rgba(56, 189, 248, 0.45);
+}
+
+.qc-failed {
+  background: rgba(225, 29, 72, 0.22);
+  color: #fda4af;
+  border: 1px solid rgba(244, 63, 94, 0.55);
 }
 
 .cancelled {

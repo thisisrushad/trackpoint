@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { Job, Vehicle } from "@/lib/data";
 import { useToast } from "@/context/ToastContext";
 import AdminConsignmentModal from "./AdminConsignmentModal";
@@ -553,7 +554,7 @@ export default function AdminConsignmentsTable({
 
         {/* Status Pill Tabs */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-          {["ALL", "Booked", "Assigned", "In Transit", "Arrived", "QC Passed", "Delivered", "Cancelled"].map((st) => {
+          {["ALL", "Booked", "Assigned", "In Transit", "Arrived", "QC Passed", "QC Failed", "Delivered", "Cancelled"].map((st) => {
             const isActive = statusFilter === st;
             return (
               <button
@@ -564,9 +565,9 @@ export default function AdminConsignmentsTable({
                   fontSize: "0.75rem",
                   fontWeight: 600,
                   borderRadius: "999px",
-                  background: isActive ? "rgba(56, 189, 248, 0.2)" : "rgba(255, 255, 255, 0.05)",
-                  color: isActive ? "#38bdf8" : "#94a3b8",
-                  border: `1px solid ${isActive ? "rgba(56, 189, 248, 0.4)" : "rgba(255, 255, 255, 0.08)"}`,
+                  background: isActive ? (st === "QC Failed" ? "rgba(244, 63, 94, 0.2)" : "rgba(56, 189, 248, 0.2)") : "rgba(255, 255, 255, 0.05)",
+                  color: isActive ? (st === "QC Failed" ? "#fda4af" : "#38bdf8") : "#94a3b8",
+                  border: `1px solid ${isActive ? (st === "QC Failed" ? "rgba(244, 63, 94, 0.4)" : "rgba(56, 189, 248, 0.4)") : "rgba(255, 255, 255, 0.08)"}`,
                   cursor: "pointer",
                   transition: "all 0.2s ease"
                 }}
@@ -625,6 +626,7 @@ export default function AdminConsignmentsTable({
                 paginatedJobs.map((job) => {
                   const isDelivered = job.status === "Delivered";
                   const isQcPassed = job.status === "QC Passed";
+                  const isQcFailed = job.status === "QC Failed";
                   const isTransit = job.status === "In Transit";
                   const isArrived = job.status === "Arrived";
                   const isCancelled = job.status === "Cancelled";
@@ -706,6 +708,8 @@ export default function AdminConsignmentsTable({
                               ? "rgba(16, 185, 129, 0.2)"
                               : isQcPassed
                               ? "rgba(14, 165, 233, 0.22)"
+                              : isQcFailed
+                              ? "rgba(244, 63, 94, 0.22)"
                               : isArrived
                               ? "rgba(168, 85, 247, 0.22)"
                               : isTransit
@@ -719,6 +723,8 @@ export default function AdminConsignmentsTable({
                               ? "#6ee7b7"
                               : isQcPassed
                               ? "#7dd3fc"
+                              : isQcFailed
+                              ? "#fda4af"
                               : isArrived
                               ? "#d8b4fe"
                               : isTransit
@@ -733,6 +739,8 @@ export default function AdminConsignmentsTable({
                                 ? "rgba(16, 185, 129, 0.4)"
                                 : isQcPassed
                                 ? "rgba(56, 189, 248, 0.45)"
+                                : isQcFailed
+                                ? "rgba(244, 63, 94, 0.5)"
                                 : isArrived
                                 ? "rgba(168, 85, 247, 0.45)"
                                 : isTransit
@@ -779,6 +787,31 @@ export default function AdminConsignmentsTable({
                           )}
 
                           {job.status === "Arrived" && (
+                            <Link
+                              href="/qc"
+                              className="btn btn-sm"
+                              style={{
+                                padding: "0.25rem 0.55rem",
+                                fontSize: "0.68rem",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                background: "linear-gradient(135deg, #7c3aed, #9333ea)",
+                                color: "#ffffff",
+                                border: "1px solid #c084fc",
+                                fontWeight: 700,
+                                borderRadius: "5px",
+                                textDecoration: "none",
+                                boxShadow: "0 2px 8px rgba(124, 58, 237, 0.4)"
+                              }}
+                              title="Go to QC Inspection Dashboard"
+                            >
+                              <ShieldCheck size={11} />
+                              <span>QC Portal</span>
+                            </Link>
+                          )}
+
+                          {job.status === "QC Failed" && (
                             <button
                               onClick={() => setSelectedJobForModal(job)}
                               className="btn btn-sm"
@@ -788,17 +821,17 @@ export default function AdminConsignmentsTable({
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "0.25rem",
-                                background: "linear-gradient(135deg, #0284c7, #38bdf8)",
+                                background: "linear-gradient(135deg, #e11d48, #f43f5e)",
                                 color: "#ffffff",
-                                border: "1px solid #7dd3fc",
+                                border: "1px solid #fda4af",
                                 fontWeight: 700,
                                 borderRadius: "5px",
-                                boxShadow: "0 2px 8px rgba(56, 189, 248, 0.4)"
+                                boxShadow: "0 2px 8px rgba(225, 29, 72, 0.4)"
                               }}
-                              title="Inspect Seals & Mark QC Passed"
+                              title="Review QC Discrepancy & Override/Reassign"
                             >
-                              <ShieldCheck size={11} />
-                              <span>Inspect QC</span>
+                              <ShieldAlert size={11} />
+                              <span>Review Fail</span>
                             </button>
                           )}
 

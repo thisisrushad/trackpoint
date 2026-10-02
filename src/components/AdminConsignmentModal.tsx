@@ -15,6 +15,7 @@ import {
   Clock,
   FileText,
   ShieldCheck,
+  ShieldAlert,
   RefreshCw,
   Printer,
   Download,
@@ -153,6 +154,36 @@ export default function AdminConsignmentModal({
       }
     } catch (err: any) {
       toast.error(err.message || "Network error", "QC Verification Failed");
+    } finally {
+      setIsSubmittingQc(false);
+    }
+  };
+
+  const handleFailQc = async () => {
+    setIsSubmittingQc(true);
+    try {
+      const verifiedTimestamp = new Date().toISOString();
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "QC Failed",
+          overrideReason: `QC_REJECTED_FAIL: Seal=${qcSealIntact ? 'PASS' : 'FAIL'}, Temp=${qcTemperatureOk ? 'PASS' : 'FAIL'}, Condition=${qcDamageFree ? 'PASS' : 'FAIL'} | Inspector=${qcInspector} | Notes=${qcNotes || "Cargo flagged as non-compliant"} | ${verifiedTimestamp}`
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.job) {
+        onJobUpdated(data.job);
+        toast.error(
+          `Consignment #${job.id} marked as "QC Failed". Escalated to Operations Admin for investigation. Driver e-POD blocked.`,
+          "QC Failed & Blocked"
+        );
+        setShowQcModal(false);
+      } else {
+        toast.error("Failed to record QC failure in database.", "Error");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Network error", "QC Failure Submission Error");
     } finally {
       setIsSubmittingQc(false);
     }
@@ -1232,40 +1263,65 @@ export default function AdminConsignmentModal({
                 padding: "1rem 1.35rem",
                 borderTop: "1px solid rgba(255, 255, 255, 0.08)",
                 display: "flex",
-                justifyContent: "flex-end",
+                justifyContent: "space-between",
+                alignItems: "center",
                 gap: "0.5rem"
               }}
             >
               <button
                 type="button"
-                onClick={() => setShowQcModal(false)}
-                className="btn btn-secondary btn-sm"
-                style={{ fontSize: "0.78rem", padding: "0.45rem 0.85rem" }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handlePassQc}
-                disabled={isSubmittingQc || !qcSealIntact || !qcDamageFree}
+                onClick={handleFailQc}
+                disabled={isSubmittingQc}
                 className="btn btn-sm"
                 style={{
                   fontSize: "0.78rem",
-                  padding: "0.45rem 1rem",
-                  background: "linear-gradient(135deg, #0284c7, #38bdf8)",
-                  color: "#ffffff",
-                  border: "1px solid #7dd3fc",
+                  padding: "0.45rem 0.85rem",
+                  background: "rgba(225, 29, 72, 0.2)",
+                  color: "#fda4af",
+                  border: "1px solid rgba(244, 63, 94, 0.5)",
                   fontWeight: 700,
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "0.4rem",
-                  cursor: (isSubmittingQc || !qcSealIntact || !qcDamageFree) ? "not-allowed" : "pointer",
-                  opacity: (!qcSealIntact || !qcDamageFree) ? 0.5 : 1
+                  cursor: isSubmittingQc ? "not-allowed" : "pointer"
                 }}
               >
-                <CheckCircle2 size={14} />
-                <span>{isSubmittingQc ? "Verifying QC..." : "Approve Quality Check (Set QC Passed)"}</span>
+                <ShieldAlert size={14} />
+                <span>Fail QC (Escalate to Admin)</span>
               </button>
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowQcModal(false)}
+                  className="btn btn-secondary btn-sm"
+                  style={{ fontSize: "0.78rem", padding: "0.45rem 0.85rem" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePassQc}
+                  disabled={isSubmittingQc || !qcSealIntact || !qcDamageFree}
+                  className="btn btn-sm"
+                  style={{
+                    fontSize: "0.78rem",
+                    padding: "0.45rem 1rem",
+                    background: "linear-gradient(135deg, #0284c7, #38bdf8)",
+                    color: "#ffffff",
+                    border: "1px solid #7dd3fc",
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    cursor: (isSubmittingQc || !qcSealIntact || !qcDamageFree) ? "not-allowed" : "pointer",
+                    opacity: (!qcSealIntact || !qcDamageFree) ? 0.5 : 1
+                  }}
+                >
+                  <CheckCircle2 size={14} />
+                  <span>{isSubmittingQc ? "Verifying QC..." : "Approve Quality Check (Set QC Passed)"}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
