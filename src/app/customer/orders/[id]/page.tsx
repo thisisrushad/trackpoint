@@ -223,15 +223,45 @@ export default function ConsignmentDetailsPage() {
                 <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#f8fafc", letterSpacing: "-0.02em" }}>
                   Consignment #{job.id}
                 </h1>
-                <span className={`badge-status ${isDelivered ? "delivered" : "in-transit"}`} style={{ fontSize: "0.85rem", padding: "0.3rem 0.8rem" }}>
-                  {job.status}
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "0.3rem 0.8rem",
+                    borderRadius: "999px",
+                    fontWeight: 700,
+                    background: isDelivered
+                      ? "rgba(16, 185, 129, 0.2)"
+                      : isInTransit
+                      ? "rgba(245, 158, 11, 0.2)"
+                      : job.status === "Booked"
+                      ? "rgba(239, 68, 68, 0.2)"
+                      : "rgba(59, 130, 246, 0.2)",
+                    color: isDelivered
+                      ? "#6ee7b7"
+                      : isInTransit
+                      ? "#fcd34d"
+                      : job.status === "Booked"
+                      ? "#fca5a5"
+                      : "#93c5fd",
+                    border: `1px solid ${
+                      isDelivered
+                        ? "rgba(16, 185, 129, 0.4)"
+                        : isInTransit
+                        ? "rgba(245, 158, 11, 0.4)"
+                        : job.status === "Booked"
+                        ? "rgba(239, 68, 68, 0.4)"
+                        : "rgba(59, 130, 246, 0.4)"
+                    }`
+                  }}
+                >
+                  {job.status === "Booked" ? "Pending Approval" : job.status}
                 </span>
                 <span className={`tag ${job.priority === "Express" ? "tag-blue" : ""}`} style={{ fontSize: "0.8rem", padding: "0.25rem 0.65rem", fontWeight: 700 }}>
                   {job.priority} Linehaul
                 </span>
               </div>
               <p className="text-muted" style={{ marginTop: "0.35rem", fontSize: "0.85rem" }}>
-                Commercial Consignee: <strong style={{ color: "#38bdf8" }}>{job.customer}</strong> • Telematics Feed Active (Stuart Hwy, NT)
+                Commercial Consignee: <strong style={{ color: "#38bdf8" }}>{job.customer}</strong> • {job.status === "Booked" ? "Awaiting Dispatcher Assignment" : "Telematics Feed Active (Stuart Hwy, NT)"}
               </p>
             </div>
 

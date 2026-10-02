@@ -120,6 +120,48 @@ export default function AdminConsignmentsTable({
     toast.info(`Consignment #${jobId} route map sent to handset of ${driverName}.`, "Route Pushed");
   };
 
+  const handleApproveJob = async (job: Job) => {
+    // Parse recommended vehicle/driver if available
+    let targetDriver = job.driver;
+    let targetVehicle = job.vehicle;
+
+    if (job.overrideReason && job.overrideReason.startsWith("RECOMMENDED_MATCH:")) {
+      const parts = job.overrideReason.split(":");
+      if (parts.length >= 3) {
+        targetVehicle = parts[1];
+        targetDriver = `${parts[2]} (#DRV-AUTO)`;
+      }
+    } else if (job.driver.includes("Pending")) {
+      targetDriver = "Dave Miller (#DRV-104)";
+      targetVehicle = "Truck #NL-14 (Mack Titan)";
+    }
+
+    try {
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "Assigned",
+          driver: targetDriver,
+          vehicle: targetVehicle,
+          eta: job.priority === "Express" ? "13:30 ACST (Express)" : "14:45 ACST"
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.job) {
+        onJobUpdated(data.job);
+        toast.success(
+          `Consignment #${job.id} approved by Dispatcher! Allocated to ${targetVehicle} (${targetDriver}).`,
+          "Booking Approved & Dispatched"
+        );
+      } else {
+        toast.error("Failed to approve consignment in database.", "Error");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Network error", "Approval Failed");
+    }
+  };
+
   const handleConfirmOverride = async () => {
     if (!overrideJob) return;
     setIsSubmittingOverride(true);
@@ -602,7 +644,28 @@ export default function AdminConsignmentsTable({
 
                       {/* Action Buttons */}
                       <td style={{ padding: "0.85rem 1rem", verticalAlign: "middle", textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", gap: "0.4rem" }}>
+                          {job.status === "Booked" && (
+                            <button
+                              onClick={() => handleApproveJob(job)}
+                              className="btn btn-sm"
+                              style={{
+                                padding: "0.3rem 0.65rem",
+                                fontSize: "0.72rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                background: "linear-gradient(135deg, #059669, #10b981)",
+                                color: "#ffffff",
+                                border: "1px solid #34d399",
+                                fontWeight: 700
+                              }}
+                              title="Approve Suggested Match & Dispatch Linehaul"
+                            >
+                              <CheckCircle2 size={12} />
+                              <span>Approve</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => setSelectedJobForModal(job)}
                             className="btn btn-secondary btn-sm"

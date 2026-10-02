@@ -133,9 +133,9 @@ export default function CustomerOrdersList({
       if (data.success && data.job) {
         onNewBooking(data.job);
         setIsModalOpen(false);
-        toast.success(
-          `Consignment #${data.job.id} created & allocated to ${data.job.vehicle}! Redirecting to live tracking...`,
-          "Booking Confirmed (FR-01)"
+        toast.info(
+          `Consignment #${data.job.id} registered! Our operations center is reviewing and allocating the linehaul unit.`,
+          "Booking Submitted (Pending Admin Approval)"
         );
         router.push(`/customer/orders/${data.job.id}`);
       } else {

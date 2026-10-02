@@ -107,19 +107,36 @@ export default function AdminConsignmentModal({
 
   const handleApproveAssignment = async () => {
     setIsUpdating(true);
+    let targetDriver = job.driver;
+    let targetVehicle = job.vehicle;
+
+    if (job.overrideReason && job.overrideReason.startsWith("RECOMMENDED_MATCH:")) {
+      const parts = job.overrideReason.split(":");
+      if (parts.length >= 3) {
+        targetVehicle = parts[1];
+        targetDriver = `${parts[2]} (#DRV-AUTO)`;
+      }
+    } else if (job.driver.includes("Pending")) {
+      targetDriver = "Dave Miller (#DRV-104)";
+      targetVehicle = "Truck #NL-14 (Mack Titan)";
+    }
+
     try {
       const res = await fetch(`/api/jobs/${job.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "Assigned"
+          status: "Assigned",
+          driver: targetDriver,
+          vehicle: targetVehicle,
+          eta: job.priority === "Express" ? "13:30 ACST (Express)" : "14:45 ACST"
         })
       });
       const data = await res.json();
       if (data.success && data.job) {
         onJobUpdated(data.job);
         toast.success(
-          `Dispatcher Approval Confirmed: Driver ${job.driver} officially assigned to Consignment #${job.id}. Manifest dispatched to in-cab console.`,
+          `Dispatcher Approval Confirmed: ${targetDriver} (${targetVehicle}) assigned to Consignment #${job.id}. Manifest dispatched to in-cab console.`,
           "Driver Assignment Approved (FR-02)"
         );
       } else {

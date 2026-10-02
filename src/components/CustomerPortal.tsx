@@ -71,12 +71,12 @@ export default function CustomerPortal({
       if (data.success) {
         onNewBooking(data.job);
         setSmsAlert(
-          `NorthLine Alert: Booking #${data.job.id} confirmed (${data.job.priority}). Auto-assigned to ${data.job.vehicle} (${data.job.driver}). ETA: ${data.job.eta}.`
+          `NorthLine Alert: Booking #${data.job.id} received. Queued for Dispatcher Approval. Algorithm suggested: ${data.job.vehicle}.`
         );
         setIsModalOpen(false);
-        toast.success(
-          `Consignment #${data.job.id} created & auto-assigned to nearest vehicle (${data.job.vehicle}).`,
-          "Booking Confirmed"
+        toast.info(
+          `Consignment #${data.job.id} registered! Awaiting Dispatcher approval before driver assignment.`,
+          "Booking Queued"
         );
       } else {
         toast.error("Failed to create booking.", "Error");

@@ -93,12 +93,13 @@ export class JobsService {
       dropoff: data.dropoff || "Katherine Store (Katherine Terrace)",
       goods: data.goods || "Heavy Mining Replacement Parts (3.4t)",
       priority: data.priority || "Standard",
-      driver: `${matchedVehicle.driver} (#DRV-${matchedVehicle.id})`,
-      vehicle: matchedVehicle.name,
-      status: "Assigned",
-      eta: data.priority === "Express" ? "13:30 ACST (Express)" : "14:45 ACST",
+      driver: "Pending Dispatcher Approval",
+      vehicle: `Suggested: ${matchedVehicle.name} (${matchedVehicle.driver})`,
+      status: "Booked",
+      eta: "Awaiting Dispatch Approval",
       lat: matchedVehicle.lat,
-      lng: matchedVehicle.lng
+      lng: matchedVehicle.lng,
+      overrideReason: `RECOMMENDED_MATCH:${matchedVehicle.name}:${matchedVehicle.driver}`
     };
 
     try {
@@ -228,12 +229,15 @@ export class JobsService {
       return { job: refreshed || targetJob || ({} as any), invoice: newInvoice };
     }
 
-    if (updates.status || updates.lat !== undefined || updates.lng !== undefined) {
+    if (updates.status || updates.driver || updates.vehicle || updates.lat !== undefined || updates.lng !== undefined) {
       try {
         await prisma.job.updateMany({
           where: { jobId: { in: [cleanId, upperId] } },
           data: {
             ...(updates.status ? { status: updates.status } : {}),
+            ...(updates.driver ? { driver: updates.driver } : {}),
+            ...(updates.vehicle ? { vehicle: updates.vehicle } : {}),
+            ...(updates.eta ? { eta: updates.eta } : {}),
             ...(updates.lat !== undefined ? { lat: updates.lat } : {}),
             ...(updates.lng !== undefined ? { lng: updates.lng } : {})
           }
@@ -244,6 +248,9 @@ export class JobsService {
 
       if (targetJob) {
         if (updates.status) targetJob.status = updates.status;
+        if (updates.driver) targetJob.driver = updates.driver;
+        if (updates.vehicle) targetJob.vehicle = updates.vehicle;
+        if (updates.eta) targetJob.eta = updates.eta;
         if (updates.lat !== undefined) targetJob.lat = updates.lat;
         if (updates.lng !== undefined) targetJob.lng = updates.lng;
       }

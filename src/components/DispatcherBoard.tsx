@@ -66,19 +66,36 @@ export default function DispatcherBoard({ jobs, fleet, onJobReassigned }: Dispat
   };
 
   const handleApproveMatch = async (job: Job) => {
+    let targetDriver = job.driver;
+    let targetVehicle = job.vehicle;
+
+    if (job.overrideReason && job.overrideReason.startsWith("RECOMMENDED_MATCH:")) {
+      const parts = job.overrideReason.split(":");
+      if (parts.length >= 3) {
+        targetVehicle = parts[1];
+        targetDriver = `${parts[2]} (#DRV-AUTO)`;
+      }
+    } else if (job.driver.includes("Pending")) {
+      targetDriver = "Dave Miller (#DRV-104)";
+      targetVehicle = "Truck #NL-14 (Mack Titan)";
+    }
+
     try {
       const res = await fetch(`/api/jobs/${job.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "Assigned"
+          status: "Assigned",
+          driver: targetDriver,
+          vehicle: targetVehicle,
+          eta: job.priority === "Express" ? "13:30 ACST (Express)" : "14:45 ACST"
         })
       });
       const data = await res.json();
       if (data.success && data.job) {
         onJobReassigned(data.job);
         toast.success(
-          `Dispatcher confirmed allocation of ${job.driver} to #${job.id}. Manifest dispatched to cab.`,
+          `Dispatcher confirmed allocation of ${targetDriver} (${targetVehicle}) to #${job.id}. Manifest dispatched to cab.`,
           "Driver Assignment Approved (FR-02)"
         );
       } else {
