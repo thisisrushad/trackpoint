@@ -315,7 +315,9 @@ export default function CustomerPortal({
                     <td>
                       <span
                         className={`badge-status ${
-                          job.status === "Delivered" || job.status === "Invoiced"
+                          job.status === "Cancelled"
+                            ? "cancelled"
+                            : job.status === "Delivered" || job.status === "Invoiced"
                             ? "delivered"
                             : "in-transit"
                         }`}

@@ -216,9 +216,23 @@ export default function AdminConsignmentModal({
                     fontWeight: 700,
                     padding: "0.2rem 0.55rem",
                     borderRadius: "999px",
-                    background: isDelivered ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)",
-                    color: isDelivered ? "#6ee7b7" : "#fcd34d",
-                    border: `1px solid ${isDelivered ? "rgba(16, 185, 129, 0.4)" : "rgba(245, 158, 11, 0.4)"}`
+                    background: job.status === "Cancelled"
+                      ? "rgba(239, 68, 68, 0.22)"
+                      : isDelivered
+                      ? "rgba(16, 185, 129, 0.2)"
+                      : "rgba(245, 158, 11, 0.2)",
+                    color: job.status === "Cancelled"
+                      ? "#fca5a5"
+                      : isDelivered
+                      ? "#6ee7b7"
+                      : "#fcd34d",
+                    border: `1px solid ${
+                      job.status === "Cancelled"
+                        ? "rgba(239, 68, 68, 0.5)"
+                        : isDelivered
+                        ? "rgba(16, 185, 129, 0.4)"
+                        : "rgba(245, 158, 11, 0.4)"
+                    }`
                   }}
                 >
                   {job.status}

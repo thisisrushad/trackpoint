@@ -159,7 +159,7 @@ export default function DriverApp({
           <div className="driver-card">
             <div className="driver-card-header">
               <span className="job-badge">Job Ref: #{activeJob.id}</span>
-              <span className={`badge-status ${activeJob.status === "Delivered" ? "delivered" : "in-transit"}`}>
+              <span className={`badge-status ${activeJob.status === "Cancelled" ? "cancelled" : activeJob.status === "Delivered" ? "delivered" : "in-transit"}`}>
                 {activeJob.status}
               </span>
             </div>

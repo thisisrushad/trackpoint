@@ -146,7 +146,7 @@ export default function DispatcherBoard({ jobs, fleet, onJobReassigned }: Dispat
             <div key={job.id} className="job-card-item">
               <div className="j-top">
                 <span className="j-id">{job.id}</span>
-                <span className={`badge-status ${job.status === "Delivered" ? "delivered" : "in-transit"}`}>
+                <span className={`badge-status ${job.status === "Cancelled" ? "cancelled" : job.status === "Delivered" ? "delivered" : "in-transit"}`}>
                   {job.status}
                 </span>
               </div>

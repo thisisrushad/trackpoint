@@ -601,6 +601,8 @@ export default function AdminConsignmentsTable({
                 paginatedJobs.map((job) => {
                   const isDelivered = job.status === "Delivered";
                   const isTransit = job.status === "In Transit";
+                  const isCancelled = job.status === "Cancelled";
+                  const isBooked = job.status === "Booked";
 
                   return (
                     <tr
@@ -672,17 +674,33 @@ export default function AdminConsignmentsTable({
                             fontWeight: 700,
                             padding: "0.2rem 0.6rem",
                             borderRadius: "999px",
-                            background: isDelivered
+                            background: isCancelled
+                              ? "rgba(239, 68, 68, 0.22)"
+                              : isDelivered
                               ? "rgba(16, 185, 129, 0.2)"
                               : isTransit
                               ? "rgba(245, 158, 11, 0.2)"
+                              : isBooked
+                              ? "rgba(249, 115, 22, 0.2)"
                               : "rgba(59, 130, 246, 0.2)",
-                            color: isDelivered ? "#6ee7b7" : isTransit ? "#fcd34d" : "#93c5fd",
+                            color: isCancelled
+                              ? "#fca5a5"
+                              : isDelivered
+                              ? "#6ee7b7"
+                              : isTransit
+                              ? "#fcd34d"
+                              : isBooked
+                              ? "#fdba74"
+                              : "#93c5fd",
                             border: `1px solid ${
-                              isDelivered
+                              isCancelled
+                                ? "rgba(239, 68, 68, 0.5)"
+                                : isDelivered
                                 ? "rgba(16, 185, 129, 0.4)"
                                 : isTransit
                                 ? "rgba(245, 158, 11, 0.4)"
+                                : isBooked
+                                ? "rgba(249, 115, 22, 0.4)"
                                 : "rgba(59, 130, 246, 0.4)"
                             }`
                           }}
