@@ -18,6 +18,7 @@ Thumbs.db
 # Reports & Documents & Presentations
 docs_and_presentations/
 reports/
+prep/
 *.docx
 *.pdf
 *.pptx
