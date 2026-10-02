@@ -163,6 +163,11 @@ function DriverActiveRunContent() {
   };
 
   const handleConfirmPOD = async () => {
+    if (job.status !== "Arrived") {
+      toast.warning("Consignment must be docked at destination receiving bay (Status: Arrived) before e-POD can be signed.", "Arrival Required");
+      return;
+    }
+
     const signatureData = canvasRef.current ? canvasRef.current.toDataURL() : undefined;
 
     if (!hasDrawn && !job.signatureDataUrl) {
@@ -199,6 +204,7 @@ function DriverActiveRunContent() {
   };
 
   const isDelivered = job.status === "Delivered" || job.status === "Invoiced";
+  const isArrived = job.status === "Arrived";
   const isInTransit = job.status === "In Transit";
   const isAssigned = job.status === "Assigned" || job.status === "Booked";
 
@@ -224,6 +230,8 @@ function DriverActiveRunContent() {
               className={`text-xs font-bold px-3 py-1 rounded-full border ${
                 isDelivered
                   ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                  : isArrived
+                  ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
                   : isInTransit
                   ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
                   : "bg-blue-500/20 text-blue-300 border-blue-500/40"
@@ -234,25 +242,32 @@ function DriverActiveRunContent() {
           </div>
 
           {/* Trip Progression Step Bar */}
-          <div className="grid grid-cols-3 gap-2 mb-5">
+          <div className="grid grid-cols-4 gap-2 mb-5">
             <div className="bg-slate-900/80 border border-emerald-500/40 rounded-xl p-3 text-center">
               <div className="text-[10px] text-slate-400 uppercase font-bold">Step 1</div>
               <div className="text-xs font-bold text-emerald-400 mt-0.5">
-                {!isAssigned ? "✓ Departed Depot" : "Depot Staging"}
+                {!isAssigned ? "✓ Departed" : "Depot Staging"}
               </div>
             </div>
 
-            <div className={`bg-slate-900/80 border rounded-xl p-3 text-center ${isInTransit ? "border-amber-400/60" : isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
+            <div className={`bg-slate-900/80 border rounded-xl p-3 text-center ${isInTransit ? "border-amber-400/60" : isArrived || isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
               <div className="text-[10px] text-slate-400 uppercase font-bold">Step 2</div>
-              <div className={`text-xs font-bold mt-0.5 ${isInTransit ? "text-amber-400" : isDelivered ? "text-emerald-400" : "text-slate-400"}`}>
-                {isDelivered ? "✓ Transit Done" : isInTransit ? "⚡ Stuart Hwy Transit" : "En Route"}
+              <div className={`text-xs font-bold mt-0.5 ${isArrived || isDelivered ? "text-emerald-400" : isInTransit ? "text-amber-400" : "text-slate-400"}`}>
+                {isArrived || isDelivered ? "✓ Corridor Done" : isInTransit ? "⚡ In Transit" : "En Route"}
+              </div>
+            </div>
+
+            <div className={`bg-slate-900/80 border rounded-xl p-3 text-center ${isArrived ? "border-purple-400/60" : isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 3</div>
+              <div className={`text-xs font-bold mt-0.5 ${isDelivered ? "text-emerald-400" : isArrived ? "text-purple-300" : "text-slate-400"}`}>
+                {isDelivered ? "✓ Docked" : isArrived ? "🏁 Docked at Bay" : "Dock Arrival"}
               </div>
             </div>
 
             <div className={`bg-slate-900/80 border rounded-xl p-3 text-center ${isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
-              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 3</div>
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 4</div>
               <div className={`text-xs font-bold mt-0.5 ${isDelivered ? "text-emerald-400" : "text-slate-400"}`}>
-                {isDelivered ? "✓ e-POD Signed" : "Dock Sign-Off"}
+                {isDelivered ? "✓ e-POD Signed" : "QC & e-POD"}
               </div>
             </div>
           </div>
@@ -272,25 +287,61 @@ function DriverActiveRunContent() {
             )}
 
             {isInTransit && (
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  disabled={isUpdating}
+                  onClick={async () => {
+                    setIsUpdating(true);
+                    try {
+                      const res = await fetch(`/api/jobs/${job.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ status: "Arrived" })
+                      });
+                      const data = await res.json();
+                      if (data.success && data.job) {
+                        setJob(data.job);
+                        toast.success(`Vehicle docked at destination receiving bay. Ready for Receiving Dock QC & e-POD sign-off.`, "Arrived at Destination");
+                      }
+                    } catch (err: any) {
+                      toast.error("Failed to update status to Arrived", "Error");
+                    } finally {
+                      setIsUpdating(false);
+                    }
+                  }}
+                  className="flex-1 py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 cursor-pointer transition"
+                >
+                  <MapPin size={15} />
+                  <span>Mark Dock Arrival (Set Status: Arrived)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => toast.info("Dock arrival notification transmitted to customer receiving department.", "Arrival Pushed")}
-                  className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition"
+                  className="py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition"
                 >
-                  <MapPin size={15} className="text-emerald-400" />
-                  <span>Notify Store: 15 Mins Away</span>
+                  <Phone size={14} className="text-emerald-400" />
+                  <span>Alert Dock</span>
                 </button>
+              </div>
+            )}
+
+            {isArrived && (
+              <div className="bg-purple-500/15 border border-purple-500/40 rounded-xl p-3.5 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2 text-purple-300 text-xs font-bold">
+                  <CheckCircle2 size={16} />
+                  <span>Vehicle Docked at Receiving Bay — Proceed with QC Verification & e-POD</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
                     const el = document.getElementById("pod-signature-box");
                     el?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 cursor-pointer transition"
+                  className="py-2 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition"
                 >
-                  <CheckCircle2 size={15} />
-                  <span>Proceed to Sign e-POD ➔</span>
+                  Open e-POD Pad ➔
                 </button>
               </div>
             )}
@@ -447,15 +498,26 @@ function DriverActiveRunContent() {
           </div>
         </div>
 
+        {/* Lockout Notice when still in transit or assigned */}
+        {!isArrived && !isDelivered && (
+          <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-300 flex items-center gap-2">
+            <span className="text-base">⚠️</span>
+            <span>
+              <strong>e-POD Locked in Transit:</strong> Consignment must dock at destination receiving dock (Status: Arrived) before receiver can sign off.
+            </span>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="space-y-2.5 pt-2">
           <button
             type="button"
+            disabled={!isArrived && !isDelivered}
             onClick={() => {
               setPhotoAttached(true);
               toast.success("Delivery dock cargo snapshot attached.", "Photo Attached");
             }}
-            className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition"
+            className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Camera size={14} className="text-emerald-400" />
             <span>{photoAttached ? "✓ Cargo Photo Attached (1 Image)" : "+ Attach Delivery Dock Photo"}</span>
@@ -463,12 +525,24 @@ function DriverActiveRunContent() {
 
           <button
             type="button"
-            disabled={isUpdating}
+            disabled={isUpdating || !isArrived}
             onClick={handleConfirmPOD}
-            className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-2 cursor-pointer transition"
+            className={`w-full py-3.5 rounded-xl font-extrabold text-sm shadow-xl flex items-center justify-center gap-2 transition ${
+              isArrived
+                ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/30 cursor-pointer"
+                : "bg-slate-800 text-slate-500 border border-white/5 cursor-not-allowed"
+            }`}
           >
             <Check size={18} />
-            <span>{isUpdating ? "Submitting e-POD..." : "Confirm Delivery & Release Tax Invoice"}</span>
+            <span>
+              {isUpdating
+                ? "Submitting e-POD..."
+                : isDelivered
+                ? "✓ Delivery Already Finalized"
+                : isArrived
+                ? "Sign e-POD & Complete Delivery"
+                : "e-POD Locked (Awaiting Dock Arrival)"}
+            </span>
           </button>
         </div>
 

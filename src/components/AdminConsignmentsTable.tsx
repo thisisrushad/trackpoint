@@ -22,6 +22,7 @@ import {
   Activity,
   AlertCircle,
   ShieldAlert,
+  ShieldCheck,
   Navigation,
   X
 } from "lucide-react";
@@ -744,6 +745,30 @@ export default function AdminConsignmentsTable({
                             >
                               <CheckCircle2 size={11} />
                               <span>Approve</span>
+                            </button>
+                          )}
+
+                          {job.status === "Arrived" && (
+                            <button
+                              onClick={() => setSelectedJobForModal(job)}
+                              className="btn btn-sm"
+                              style={{
+                                padding: "0.25rem 0.55rem",
+                                fontSize: "0.68rem",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                background: "linear-gradient(135deg, #9333ea, #a855f7)",
+                                color: "#ffffff",
+                                border: "1px solid #c084fc",
+                                fontWeight: 700,
+                                borderRadius: "5px",
+                                boxShadow: "0 2px 8px rgba(168, 85, 247, 0.4)"
+                              }}
+                              title="Cargo Dock QC Check & e-POD Sign-off"
+                            >
+                              <ShieldCheck size={11} />
+                              <span>QC / Deliver</span>
                             </button>
                           )}
 

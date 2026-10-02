@@ -384,9 +384,9 @@ def create_presentation(output_path="prep/TrackPoint_Master_Presentation.pptx"):
     steps = [
         ("1. BOOKED", RGBColor(239, 68, 68), "Order Submitted", "Customer inputs freight specs. Enters queue as pending operational review. Nearest heavy vehicle is identified."),
         ("2. ASSIGNED", RGBColor(59, 130, 246), "Dispatcher Verified", "Dispatcher reviews driver hours and license class (MC/HR). Human override permits live reassignment before commitment."),
-        ("3. IN TRANSIT", RGBColor(245, 158, 11), "Stuart Hwy Run", "Vehicle departs Darwin depot. Live telematics stream vector coordinates, bearing, and speed (92 km/h) down the corridor."),
-        ("4. ARRIVED", RGBColor(168, 85, 247), "Destination Docked", "Truck docks at destination dock (0 km/h). CRITICAL: Delivery is blocked until physical QC inspection and e-POD are signed."),
-        ("5. DELIVERED", RGBColor(16, 185, 129), "Verified & Closed", "Bolt seal verified (#NT-89422-SEC), reefer temp checked (+4°C), consignee digital sign-off completed. Invoice auto-issued.")
+        ("3. IN TRANSIT", RGBColor(245, 158, 11), "Stuart Hwy Run", "Vehicle journeys down corridor. e-POD pad is strictly LOCKED with transit warning banner to prevent fraudulent en-route sign-offs."),
+        ("4. ARRIVED", RGBColor(168, 85, 247), "Destination Docked", "Truck docks at receiving bay (0 km/h) or driver marks arrival. Unlocks dock QC inspection gate. Premature auto-delivery is blocked."),
+        ("5. DELIVERED", RGBColor(16, 185, 129), "Manual Sign-Off", "Authorized supervisor conducts physical QC, confirms bolt seal & reefer temp, signs e-POD, and manually sets status to Delivered.")
     ]
 
     for idx, (title, col, sub, desc) in enumerate(steps):
@@ -430,10 +430,10 @@ def create_presentation(output_path="prep/TrackPoint_Master_Presentation.pptx"):
     p.font.bold = True
     p.font.color.rgb = ACCENT_CYAN
     points = [
-        "Real-World Depth: In commercial logistics, cargo can never be marked 'Delivered' automatically upon arrival.",
-        "CoR Statutory Compliance: The receiver and carrier are legally liable under Australian law for cargo security and temperature compliance.",
-        "Prevents Multi-Million Dollar Claims: If a container bolt seal is tampered with or frozen beef spoils above +4°C, TrackPoint flags it immediately before custody transfers.",
-        "Zero Paper Dockets: Receiver digitally signs on tablet/screen. Legal e-POD is permanently archived with UTC/ACST timestamps."
+        "Transit Lockout Enforcement: Driver handset explicitly disables e-POD signature during transit with an active warning banner, preventing fraudulent drop-off claims.",
+        "Segregation of Duties (SoD): In real enterprise freight, a truck cannot auto-mark 'Delivered'. Proximity only sets 'Arrived'—a human inspector must manually sign off QC.",
+        "CoR Statutory Compliance: The receiver and carrier are legally liable under Australian law for cargo security (#NT-89422-SEC bolt seal) and temperature compliance (+4°C).",
+        "Manual Audit Gate: Dispatcher/supervisor verifies seal, checks reefer cold-chain, signs digital e-POD, and manually transitions status to Delivered, immediately releasing the tax invoice."
     ]
     for pt in points:
         p_pt = tf.add_paragraph()

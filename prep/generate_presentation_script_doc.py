@@ -235,14 +235,14 @@ def generate_script_doc(output_path="prep/TrackPoint_Presentation_Script.docx"):
         "The 5-Stage Lifecycle State Machine",
         "3:15 - 4:30 (75 sec)",
         "5 Sequential Stage Cards: Booked -> Assigned -> In Transit -> Arrived -> Delivered.",
-        "Use your hands to illustrate the progression across the 5 stages. Emphasize Stage 4 (Arrived).",
+        "Use your hands to illustrate the progression across the 5 stages. Emphasize Stage 4 (Arrived) and the transit lockout.",
         "\"Most student logistics projects have a toy lifecycle where a package simply flips from 'In Transit' straight to 'Delivered'. In enterprise road transport, that is illegal and operationally negligent.\n\n"
         "TrackPoint enforces a strict five-stage deterministic state machine:\n"
         "Stage 1 is 'Booked': an order is placed and awaits dispatcher review.\n"
         "Stage 2 is 'Assigned': the dispatcher checks driver fatigue hours and approves the match.\n"
-        "Stage 3 is 'In Transit': the vehicle journeys down the Stuart Highway at 88 to 95 km/h.\n"
-        "Stage 4 is 'Arrived': when the heavy vehicle pulls into the destination receiving dock, the truck comes to a complete halt at 0 km/h and transitions to 'Arrived' with a distinct purple status. The driver CANNOT mark the job delivered.\n"
-        "And Stage 5 is 'Delivered': custody transfers ONLY after physical security seal verification, temperature checks, and a legal digital signature are captured.\""
+        "Stage 3 is 'In Transit': the vehicle journeys down the Stuart Highway at 88 to 95 km/h. During this stage, the driver handset explicitly locks the e-POD signature pad with an amber warning banner. A driver cannot sign an e-POD while in transit—it is technically blocked.\n"
+        "Stage 4 is 'Arrived': when the heavy vehicle pulls into the destination receiving dock, the truck comes to a complete halt at 0 km/h and transitions to 'Arrived' with a distinct purple status. The driver STILL cannot mark the job delivered.\n"
+        "And Stage 5 is 'Delivered': custody transfers ONLY after a human supervisor manually conducts the Quality Check (bolt security seal check, +4°C reefer temperature check) and captures the digital e-POD signature. Someone must manually verify QC and update the status to Delivered, which releases the invoice.\""
     )
 
     # Slide 5
@@ -254,12 +254,12 @@ def generate_script_doc(output_path="prep/TrackPoint_Presentation_Script.docx"):
         "Lean in slightly. This is your highest-scoring feature. Speak with passion about industry standards and legal compliance.",
         "\"Professor, this slide represents the most critical feature in TrackPoint—the Receiving Dock QC and e-POD workflow.\n\n"
         "Under the Australian Heavy Vehicle National Law, Chain of Responsibility (CoR) makes both the carrier and the receiver legally liable for cargo condition. If a refrigerated container of beef warms up past +4°C during outback transit, or if a container bolt seal is snapped, NorthLine could face a $100,000 claim.\n\n"
-        "In TrackPoint, when the vehicle reaches the dock, the admin or receiver opens the 'QC & e-POD Sign-off' dialog. The receiver must explicitly verify:\n"
+        "That is why someone must manually update the status to Delivered after verifying QC has passed. In TrackPoint, when the vehicle reaches the dock, the supervisor opens the 'QC & e-POD Sign-off' dialog. The receiver must explicitly verify:\n"
         "1. High-security bolt seal integrity (#NT-89422-SEC).\n"
         "2. Cold-chain reefer temperature setpoint at +4°C.\n"
         "3. Zero packaging puncture or strap failure.\n"
         "And 4. The receiver's authorized name, title, and digital signature.\n\n"
-        "Only when this form is submitted does the system unlock the 'Delivered' state and trigger billing. This single feature bridges academic software engineering with commercial enterprise supply chain standards.\""
+        "Only when the supervisor clicks 'Approve QC & Sign e-POD' does the status manually update to 'Delivered' and trigger the tax invoice. This eliminates premature drop-off fraud and bridges academic software engineering with commercial enterprise standards.\""
     )
 
     # Slide 6

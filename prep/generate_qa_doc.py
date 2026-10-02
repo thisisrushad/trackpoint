@@ -266,17 +266,16 @@ def generate_qa_doc(output_path="prep/TrackPoint_Teacher_QA_Defense_Guide.docx")
 
     add_qa(
         5,
-        "Walk me through the exact state machine of a consignment. Why can't a truck go straight from 'In Transit' to 'Delivered'?",
+        "Walk me through the exact state machine of a consignment. Why can't a driver sign an e-POD or mark 'Delivered' while still in transit?",
         "Core Business Logic & State Machine",
         "The teacher wants to see if you understand realistic industrial processes versus simplistic CRUD apps.",
-        "In amateur software, packages magically flip from 'In Transit' to 'Delivered'. In heavy freight and commercial road transport, that is illegal and operationally impossible.\n"
-        "TrackPoint enforces a strict 5-stage deterministic state machine:\n"
-        "1. Booked: Customer submits freight order; pending operational review.\n"
-        "2. Assigned: Dispatcher reviews match, verifies driver license and hours, and commits heavy vehicle allocation.\n"
-        "3. In Transit: Heavy vehicle departs Darwin depot, streaming real-time telematics down the Stuart Highway at 88-95 km/h.\n"
-        "4. Arrived: When coordinates reach the receiver's dock, the truck speed drops to 0 km/h and transitions to 'Arrived' (distinct purple status). The driver CANNOT mark delivered yet.\n"
-        "5. Delivered: An authorized dock supervisor conducts mandatory physical security seal inspection, checks cold-chain temperature (+4°C), inspects cargo packaging, and digitally signs the e-POD. Only then does the job finalize and trigger invoice generation.",
-        ["Deterministic state machine", "Dock receiving state (Arrived)", "Security seal validation", "Cold-chain temperature verification", "Legal e-POD sign-off", "Automated invoice trigger"]
+        "In commercial road transport and legal Chain of Responsibility (CoR), a driver signing off or marking 'Delivered' while 500 km away on the highway is illegal fraud. TrackPoint strictly prevents this:\n"
+        "1. Booked: Order placed by customer; queued for operational allocation.\n"
+        "2. Assigned: Dispatcher reviews driver hours and assigns linehaul unit.\n"
+        "3. In Transit: Truck journeys down Stuart Highway. The e-POD signature pad is strictly LOCKED with an active warning banner. Premature delivery submission is blocked at both client and API validation.\n"
+        "4. Arrived: When coordinates reach the destination receiving bay (or when the driver/dispatcher confirms dock arrival), speed drops to 0 km/h and status becomes 'Arrived' (distinct purple status). The driver STILL cannot finalize delivery alone.\n"
+        "5. Delivered: An authorized receiving supervisor or dispatcher must manually conduct the Quality Check (bolt security seal check, reefer temperature verify at +4°C, damage inspection) and capture the consignee digital signature. Only upon passing QC is the status manually finalized to 'Delivered', releasing the official e-POD and automated tax invoice.",
+        ["Deterministic state machine", "Transit e-POD lockout", "Dock receiving state (Arrived)", "Manual QC verification", "Bolt seal check", "Cold-chain temperature verification", "Legal e-POD sign-off", "Automated invoice release"]
     )
 
     add_qa(
@@ -361,6 +360,19 @@ def generate_qa_doc(output_path="prep/TrackPoint_Teacher_QA_Defense_Guide.docx")
         "The teacher wants to see genuine problem-solving experience and personal code ownership.",
         "The most challenging issue was synchronizing the live Stuart Highway Leaflet vector simulation with our deterministic state machine. Initially, the simulated truck would reach the destination and instantly cycle back to the origin, leaving the consignment in 'In Transit' while the map showed arrival. I solved this by decoupling the GPS simulation into a milestone-driven state loop: implementing vector bearing calculation, adding an explicit 'Arrived' intermediate lifecycle state in Mongoose and Prisma, and halting the transponder at 0 km/h upon dock proximity. Then, I engineered the QC & e-POD modal callback so that the delivery completion event is strictly bound to human seal verification and signature sign-off.",
         ["GPS vector interpolation", "Decoupled state loop", "Intermediate lifecycle synchronization", "Bearing calculation", "Human-in-the-loop QC validation"]
+    )
+
+    add_qa(
+        13,
+        "Why must an authorized person manually update status to 'Delivered' and verify QC passed, rather than the system doing it automatically?",
+        "Industrial Compliance & Segregation of Duties",
+        "Assessing your understanding of audit trails, fraud prevention, and Segregation of Duties (SoD).",
+        "In enterprise logistics, automatic delivery marking is a catastrophic security risk. If a system automatically flips to 'Delivered' when GPS hits a coordinate radius, a carrier could deliver damaged goods, warm milk, or broken containers without any human accountability. TrackPoint enforces strict Segregation of Duties (SoD):\n"
+        "1. The telematics system and GPS map only signal physical proximity, setting status to 'Arrived' (or the driver can click 'Mark Dock Arrival').\n"
+        "2. Custody transfer requires a human-in-the-loop manual action: an authorized dock inspector or dispatcher must click 'QC & e-POD Sign-off' (or 'QC / Deliver' in the table), manually inspect the bolt security seal, verify temperature compliance, check packaging condition, and enter the consignee signatory details.\n"
+        "3. Only clicking 'Approve QC & Sign e-POD' manually transitions the consignment from 'Arrived' to 'Delivered' and generates the tax invoice.\n"
+        "This ensures a non-repudiable legal audit trail where every delivered consignment is backed by a named inspector and validated physical checks.",
+        ["Segregation of Duties (SoD)", "Human-in-the-loop compliance", "Non-repudiable audit trail", "Physical QC checklist", "Manual status transition", "Fraud prevention"]
     )
 
     doc.save(output_path)

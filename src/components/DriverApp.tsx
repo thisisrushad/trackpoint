@@ -86,6 +86,11 @@ export default function DriverApp({
   };
 
   const handleConfirm = async () => {
+    if (activeJob.status !== "Arrived" && activeJob.status !== "Delivered") {
+      toast.warning("Consignment must be docked at destination receiving dock (Status: Arrived) before e-POD can be signed.", "Arrival Required");
+      return;
+    }
+
     const signatureData = canvasRef.current ? canvasRef.current.toDataURL() : undefined;
 
     if (isOffline) {

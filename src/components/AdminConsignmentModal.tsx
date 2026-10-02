@@ -409,7 +409,11 @@ export default function AdminConsignmentModal({
               </button>
               <button
                 disabled={isUpdating || job.status === "Delivered"}
-                onClick={() => handleStatusChange("Delivered")}
+                onClick={() => {
+                  if (job.status !== "Delivered") {
+                    setShowQcModal(true);
+                  }
+                }}
                 style={{
                   padding: "0.3rem 0.65rem",
                   fontSize: "0.75rem",
@@ -419,8 +423,9 @@ export default function AdminConsignmentModal({
                   border: "1px solid rgba(255, 255, 255, 0.1)",
                   cursor: "pointer"
                 }}
+                title={job.status === "Delivered" ? "Consignment Delivered" : "Perform Mandatory QC Inspection & Sign e-POD"}
               >
-                Delivered
+                {job.status === "Delivered" ? "Delivered" : "QC / Deliver ➔"}
               </button>
               {job.status !== "Delivered" && job.status !== "Invoiced" && job.status !== "Cancelled" && (
                 <button
