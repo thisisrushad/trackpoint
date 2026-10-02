@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Job, STUART_HIGHWAY_WAYPOINTS, NT_COORDINATES } from "@/lib/data";
 import { useToast } from "@/context/ToastContext";
@@ -43,6 +43,17 @@ export default function AdminConsignmentModal({
   const [reasonCode, setReasonCode] = useState("DRIVER_FATIGUE");
   const [showOverrideForm, setShowOverrideForm] = useState(false);
   const [showMap, setShowMap] = useState(true);
+
+  // Allow closing modal with Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const isDelivered = job.status === "Delivered";
 
@@ -151,7 +162,11 @@ export default function AdminConsignmentModal({
   };
 
   return (
-    <div className="modal-backdrop" style={{ zIndex: 10000, overflowY: "auto", padding: "1.5rem 0" }}>
+    <div
+      className="modal-backdrop"
+      style={{ zIndex: 10000, overflowY: "auto", padding: "1.5rem 0" }}
+      onClick={onClose}
+    >
       <div
         className="modal-dialog"
         style={{
@@ -164,6 +179,7 @@ export default function AdminConsignmentModal({
           backdropFilter: "blur(20px)",
           color: "#f8fafc"
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div
@@ -245,20 +261,37 @@ export default function AdminConsignmentModal({
           </div>
 
           <button
-            onClick={onClose}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            aria-label="Close consignment modal"
+            title="Close modal (Esc)"
             style={{
-              background: "rgba(255, 255, 255, 0.06)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              color: "#94a3b8",
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              color: "#f1f5f9",
               borderRadius: "8px",
-              padding: "0.4rem",
+              padding: "0.45rem",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center"
+              justifyContent: "center",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
+              e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.6)";
+              e.currentTarget.style.color = "#fca5a5";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)";
+              e.currentTarget.style.color = "#f1f5f9";
             }}
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 

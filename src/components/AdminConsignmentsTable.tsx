@@ -853,7 +853,11 @@ export default function AdminConsignmentsTable({
 
       {/* Quick Dispatcher Reassignment Modal */}
       {overrideJob && (
-        <div className="modal-backdrop" style={{ zIndex: 10000 }}>
+        <div
+          className="modal-backdrop"
+          style={{ zIndex: 10000 }}
+          onClick={() => setOverrideJob(null)}
+        >
           <div
             className="modal-dialog"
             style={{
@@ -864,6 +868,7 @@ export default function AdminConsignmentsTable({
               boxShadow: "0 20px 40px rgba(0, 0, 0, 0.8)",
               color: "#f8fafc"
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div
               className="modal-header"
@@ -985,7 +990,11 @@ export default function AdminConsignmentsTable({
 
       {/* 5. Cancel Consignment Compliance Reason Modal */}
       {cancelJob && (
-        <div className="modal-backdrop" style={{ zIndex: 10001 }}>
+        <div
+          className="modal-backdrop"
+          style={{ zIndex: 10001 }}
+          onClick={() => setCancelJob(null)}
+        >
           <div
             className="modal-dialog"
             style={{
@@ -996,6 +1005,7 @@ export default function AdminConsignmentsTable({
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.7)",
               color: "#f8fafc"
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div
               className="modal-header"
@@ -1101,7 +1111,11 @@ export default function AdminConsignmentsTable({
 
       {/* 6. Dedicated Dispatcher Approval & Vehicle/Driver Allocation Modal */}
       {approveModalJob && (
-        <div className="modal-backdrop" style={{ zIndex: 10002 }}>
+        <div
+          className="modal-backdrop"
+          style={{ zIndex: 10002 }}
+          onClick={() => setApproveModalJob(null)}
+        >
           <div
             className="modal-dialog"
             style={{
@@ -1112,6 +1126,7 @@ export default function AdminConsignmentsTable({
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.85)",
               color: "#f8fafc"
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div
               className="modal-header"
