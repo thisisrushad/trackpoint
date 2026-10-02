@@ -385,7 +385,7 @@ export default function AdminConsignmentModal({
             </div>
 
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              {(job.status === "Booked" || job.status === "Assigned") && (
+              {job.status === "Booked" && (
                 <button
                   type="button"
                   disabled={isUpdating}
