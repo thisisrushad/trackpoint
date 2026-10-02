@@ -58,6 +58,11 @@ export default function AdminConsignmentsTable({
   const [reasonCode, setReasonCode] = useState("DRIVER_FATIGUE");
   const [isSubmittingOverride, setIsSubmittingOverride] = useState(false);
 
+  // Cancellation modal
+  const [cancelJob, setCancelJob] = useState<Job | null>(null);
+  const [cancelReasonCode, setCancelReasonCode] = useState("WEATHER_ROAD_CLOSURE");
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
   // KPI Calculations
   const stats = useMemo(() => {
     const total = jobs.length;
@@ -191,6 +196,37 @@ export default function AdminConsignmentsTable({
       toast.error(err.message || "Network error", "Override Failed");
     } finally {
       setIsSubmittingOverride(false);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelJob) return;
+    setIsSubmittingCancel(true);
+
+    try {
+      const res = await fetch(`/api/jobs/${cancelJob.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "cancel",
+          reasonCode: cancelReasonCode
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.job) {
+        onJobUpdated(data.job);
+        toast.info(
+          `Consignment #${cancelJob.id} has been CANCELLED. Reason code [${cancelReasonCode}] registered for compliance audit.`,
+          "Consignment Cancelled"
+        );
+        setCancelJob(null);
+      } else {
+        toast.error("Failed to cancel consignment in database.", "Error");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Network error", "Cancellation Failed");
+    } finally {
+      setIsSubmittingCancel(false);
     }
   };
 
@@ -695,6 +731,27 @@ export default function AdminConsignmentsTable({
                             <span>Override</span>
                           </button>
 
+                          {job.status !== "Delivered" && job.status !== "Invoiced" && job.status !== "Cancelled" && (
+                            <button
+                              onClick={() => setCancelJob(job)}
+                              className="btn btn-secondary btn-sm"
+                              style={{
+                                padding: "0.3rem 0.55rem",
+                                fontSize: "0.72rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                color: "#f87171",
+                                borderColor: "rgba(239, 68, 68, 0.3)",
+                                background: "rgba(239, 68, 68, 0.08)"
+                              }}
+                              title="Cancel / Reject Consignment with NHVR Reason Code"
+                            >
+                              <X size={12} />
+                              <span>Cancel</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => handlePushRoute(job.id, job.driver)}
                             className="btn btn-primary btn-sm"
@@ -866,6 +923,122 @@ export default function AdminConsignmentsTable({
               >
                 <CheckCircle2 size={13} />
                 <span>Confirm & Update DB</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Cancel Consignment Compliance Reason Modal */}
+      {cancelJob && (
+        <div className="modal-backdrop" style={{ zIndex: 10001 }}>
+          <div
+            className="modal-dialog"
+            style={{
+              maxWidth: "520px",
+              background: "#1e293b",
+              border: "1px solid rgba(239, 68, 68, 0.4)",
+              borderRadius: "12px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.7)",
+              color: "#f8fafc"
+            }}
+          >
+            <div
+              className="modal-header"
+              style={{
+                padding: "1rem 1.25rem",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <ShieldAlert size={18} color="#ef4444" />
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>
+                  Cancel Consignment #{cancelJob.id}
+                </h3>
+              </div>
+              <button
+                onClick={() => setCancelJob(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: "1.25rem" }}>
+              <p style={{ fontSize: "0.82rem", color: "#94a3b8", marginTop: 0, marginBottom: "1rem" }}>
+                Cancelling this consignment will withdraw linehaul allocation for customer <strong style={{ color: "#f8fafc" }}>{cancelJob.customer}</strong> and release any assigned assets.
+              </p>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 600 }}>
+                  Mandatory Cancellation Reason Code (ATO & NHVR Audit):
+                </label>
+                <select
+                  value={cancelReasonCode}
+                  onChange={(e) => setCancelReasonCode(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "6px",
+                    background: "#0f172a",
+                    color: "#f8fafc",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    fontSize: "0.82rem"
+                  }}
+                >
+                  <option value="WEATHER_ROAD_CLOSURE">Stuart Highway Flash Flooding / Severe Weather Hazard</option>
+                  <option value="CARGO_EXCEEDS_CAPACITY">Cargo Exceeds GVM / Non-Compliant Weight</option>
+                  <option value="CUSTOMER_REQUESTED">Customer Direct Cancellation Request</option>
+                  <option value="VEHICLE_UNAVAILABLE">Mechanical Breakdown / No Alternative Linehaul Unit</option>
+                  <option value="CREDIT_HOLD">Consignee Commercial Account on Credit Hold</option>
+                </select>
+              </div>
+            </div>
+
+            <div
+              className="modal-footer"
+              style={{
+                padding: "0.85rem 1.25rem",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.5rem"
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setCancelJob(null)}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: "0.75rem", padding: "0.4rem 0.85rem" }}
+              >
+                Keep Active
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingCancel}
+                onClick={handleConfirmCancel}
+                className="btn btn-sm"
+                style={{
+                  fontSize: "0.75rem",
+                  padding: "0.4rem 1rem",
+                  background: "#ef4444",
+                  border: "1px solid #dc2626",
+                  color: "#ffffff",
+                  fontWeight: 700
+                }}
+              >
+                <X size={13} />
+                <span>{isSubmittingCancel ? "Cancelling..." : "Confirm Cancellation"}</span>
               </button>
             </div>
           </div>

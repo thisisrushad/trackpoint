@@ -108,6 +108,37 @@ export default function ConsignmentDetailsPage() {
     return () => clearInterval(gpsInterval);
   }, [job?.id, job?.status]);
 
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancelBooking = async () => {
+    if (!job) return;
+    const confirmCancel = window.confirm(`Are you sure you want to cancel Consignment #${job.id}? This will withdraw the shipment request.`);
+    if (!confirmCancel) return;
+
+    setIsCancelling(true);
+    try {
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "cancel",
+          reasonCode: "CUSTOMER_SELF_SERVICE_CANCELLATION"
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.job) {
+        setJob(data.job);
+        toast.info(`Consignment #${job.id} has been cancelled successfully.`, "Booking Cancelled");
+      } else {
+        toast.error("Failed to cancel consignment.", "Error");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Network error", "Cancellation Failed");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("trackpoint_token");
     localStorage.removeItem("trackpoint_user");
@@ -275,6 +306,26 @@ export default function ConsignmentDetailsPage() {
                 <Printer size={14} />
                 <span>Print Consignment Note</span>
               </button>
+              {(job.status === "Booked" || job.status === "Assigned") && (
+                <button
+                  className="btn btn-sm"
+                  onClick={handleCancelBooking}
+                  disabled={isCancelling}
+                  style={{
+                    display: "inline-flex",
+                    gap: "0.4rem",
+                    alignItems: "center",
+                    background: "rgba(239, 68, 68, 0.15)",
+                    border: "1px solid rgba(239, 68, 68, 0.4)",
+                    color: "#f87171",
+                    fontWeight: 700
+                  }}
+                  title="Cancel Booking (Permitted prior to Highway departure)"
+                >
+                  <AlertCircle size={14} />
+                  <span>{isCancelling ? "Cancelling..." : "Cancel Booking"}</span>
+                </button>
+              )}
               {isDelivered && (
                 <button
                   className="btn btn-primary btn-sm"

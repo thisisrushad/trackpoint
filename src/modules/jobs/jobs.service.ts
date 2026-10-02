@@ -138,6 +138,29 @@ export class JobsService {
     const upperId = cleanId.toUpperCase();
     let targetJob = await this.getJobById(id);
 
+    if (updates.action === "cancel") {
+      const cancelReason = updates.reasonCode || updates.reason || "CUSTOMER_REQUESTED";
+      try {
+        await prisma.job.updateMany({
+          where: { jobId: { in: [cleanId, upperId] } },
+          data: {
+            status: "Cancelled",
+            overrideReason: `CANCELLED:${cancelReason}`
+          }
+        });
+      } catch (e) {
+        console.error("Prisma cancel error:", e);
+      }
+
+      if (targetJob) {
+        targetJob.status = "Cancelled";
+        targetJob.overrideReason = `CANCELLED:${cancelReason}`;
+      }
+
+      const refreshed = await this.getJobById(id);
+      return { job: refreshed || targetJob || ({} as any) };
+    }
+
     if (updates.action === "override") {
       try {
         await prisma.job.updateMany({

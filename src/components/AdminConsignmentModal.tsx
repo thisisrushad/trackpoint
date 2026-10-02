@@ -311,6 +311,29 @@ export default function AdminConsignmentModal({
               >
                 Delivered
               </button>
+              {job.status !== "Delivered" && job.status !== "Invoiced" && job.status !== "Cancelled" && (
+                <button
+                  disabled={isUpdating}
+                  onClick={() => {
+                    const reason = window.prompt("Enter Mandatory Cancellation Reason Code (e.g. ROAD_CLOSURE, CARGO_LIMIT, CUSTOMER_CANCEL):", "CUSTOMER_REQUESTED");
+                    if (reason) {
+                      handleStatusChange("Cancelled");
+                    }
+                  }}
+                  style={{
+                    padding: "0.3rem 0.65rem",
+                    fontSize: "0.75rem",
+                    borderRadius: "6px",
+                    background: "rgba(239, 68, 68, 0.15)",
+                    color: "#f87171",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    cursor: "pointer"
+                  }}
+                  title="Cancel Consignment with Compliance Audit Log"
+                >
+                  Cancel Order
+                </button>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
