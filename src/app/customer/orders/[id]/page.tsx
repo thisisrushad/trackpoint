@@ -178,6 +178,7 @@ export default function ConsignmentDetailsPage() {
   }
 
   const isDelivered = job.status === "Delivered" || job.status === "Invoiced";
+  const isArrived = job.status === "Arrived";
   const isInTransit = job.status === "In Transit";
   const isAssigned = job.status === "Assigned" || job.status === "Booked";
 
@@ -262,6 +263,8 @@ export default function ConsignmentDetailsPage() {
                     fontWeight: 700,
                     background: isDelivered
                       ? "rgba(16, 185, 129, 0.2)"
+                      : isArrived
+                      ? "rgba(168, 85, 247, 0.22)"
                       : isInTransit
                       ? "rgba(245, 158, 11, 0.2)"
                       : job.status === "Booked"
@@ -269,6 +272,8 @@ export default function ConsignmentDetailsPage() {
                       : "rgba(59, 130, 246, 0.2)",
                     color: isDelivered
                       ? "#6ee7b7"
+                      : isArrived
+                      ? "#d8b4fe"
                       : isInTransit
                       ? "#fcd34d"
                       : job.status === "Booked"
@@ -277,6 +282,8 @@ export default function ConsignmentDetailsPage() {
                     border: `1px solid ${
                       isDelivered
                         ? "rgba(16, 185, 129, 0.4)"
+                        : isArrived
+                        ? "rgba(168, 85, 247, 0.45)"
                         : isInTransit
                         ? "rgba(245, 158, 11, 0.4)"
                         : job.status === "Booked"

@@ -56,6 +56,16 @@ export default function AdminConsignmentModal({
   }, [onClose]);
 
   const isDelivered = job.status === "Delivered";
+  const isArrived = job.status === "Arrived";
+
+  const [showQcModal, setShowQcModal] = useState(false);
+  const [qcInspector, setQcInspector] = useState("Sandra Wilson (Receiving Lead)");
+  const [qcSealIntact, setQcSealIntact] = useState(true);
+  const [qcTemperatureOk, setQcTemperatureOk] = useState(true);
+  const [qcDamageFree, setQcDamageFree] = useState(true);
+  const [qcSigneeName, setQcSigneeName] = useState("Sandra Wilson");
+  const [qcNotes, setQcNotes] = useState("All pallet seals verified intact. Cargo received in good order.");
+  const [isSubmittingQc, setIsSubmittingQc] = useState(false);
 
   const handlePushRoute = () => {
     toast.info(`Consignment #${job.id} route telemetry successfully transmitted to Driver ${job.driver}.`, "Route Pushed");
@@ -91,7 +101,7 @@ export default function AdminConsignmentModal({
     }
   };
 
-  const handleStatusChange = async (newStatus: "Assigned" | "In Transit" | "Delivered" | "Cancelled", reasonCode?: string) => {
+  const handleStatusChange = async (newStatus: "Assigned" | "In Transit" | "Arrived" | "Delivered" | "Cancelled", reasonCode?: string) => {
     setIsUpdating(true);
     try {
       const res = await fetch(`/api/jobs/${job.id}`, {
@@ -114,6 +124,38 @@ export default function AdminConsignmentModal({
       toast.error(err.message || "Network error", "Update Failed");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleCompleteQcAndDelivery = async () => {
+    setIsSubmittingQc(true);
+    try {
+      const completedTimestamp = new Date().toISOString();
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "Delivered",
+          recipientName: qcSigneeName,
+          completedAt: completedTimestamp,
+          overrideReason: `QC_VERIFIED: Seal=${qcSealIntact ? 'PASS' : 'FAIL'}, Temp=${qcTemperatureOk ? 'PASS' : 'FAIL'}, Condition=${qcDamageFree ? 'PASS' : 'FAIL'} | Inspector=${qcInspector} | Notes=${qcNotes}`
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.job) {
+        onJobUpdated(data.job);
+        toast.success(
+          `Dock Quality Check Passed! Consignment #${job.id} signed off by ${qcSigneeName}. Official e-POD & Tax Invoice issued.`,
+          "QC Inspection & e-POD Complete (FR-11)"
+        );
+        setShowQcModal(false);
+      } else {
+        toast.error("Failed to complete delivery sign-off.", "Error");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Network error", "QC Submission Failed");
+    } finally {
+      setIsSubmittingQc(false);
     }
   };
 
@@ -236,17 +278,23 @@ export default function AdminConsignmentModal({
                       ? "rgba(239, 68, 68, 0.22)"
                       : isDelivered
                       ? "rgba(16, 185, 129, 0.2)"
+                      : isArrived
+                      ? "rgba(168, 85, 247, 0.22)"
                       : "rgba(245, 158, 11, 0.2)",
                     color: job.status === "Cancelled"
                       ? "#fca5a5"
                       : isDelivered
                       ? "#6ee7b7"
+                      : isArrived
+                      ? "#d8b4fe"
                       : "#fcd34d",
                     border: `1px solid ${
                       job.status === "Cancelled"
                         ? "rgba(239, 68, 68, 0.5)"
                         : isDelivered
                         ? "rgba(16, 185, 129, 0.4)"
+                        : isArrived
+                        ? "rgba(168, 85, 247, 0.45)"
                         : "rgba(245, 158, 11, 0.4)"
                     }`
                   }}
@@ -345,6 +393,21 @@ export default function AdminConsignmentModal({
                 In Transit
               </button>
               <button
+                disabled={isUpdating || job.status === "Arrived"}
+                onClick={() => handleStatusChange("Arrived")}
+                style={{
+                  padding: "0.3rem 0.65rem",
+                  fontSize: "0.75rem",
+                  borderRadius: "6px",
+                  background: job.status === "Arrived" ? "rgba(168, 85, 247, 0.3)" : "rgba(255, 255, 255, 0.05)",
+                  color: job.status === "Arrived" ? "#d8b4fe" : "#cbd5e1",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  cursor: "pointer"
+                }}
+              >
+                Arrived
+              </button>
+              <button
                 disabled={isUpdating || job.status === "Delivered"}
                 onClick={() => handleStatusChange("Delivered")}
                 style={{
@@ -385,6 +448,34 @@ export default function AdminConsignmentModal({
             </div>
 
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              {/* If Arrived at Destination Dock, show prominent QC & e-POD Sign-Off Button */}
+              {(job.status === "Arrived" || (isArrived && !isDelivered)) && (
+                <button
+                  type="button"
+                  disabled={isUpdating}
+                  onClick={() => setShowQcModal(true)}
+                  className="btn btn-sm"
+                  style={{
+                    fontSize: "0.75rem",
+                    padding: "0.35rem 0.85rem",
+                    background: "linear-gradient(135deg, #9333ea, #a855f7)",
+                    color: "#ffffff",
+                    border: "1px solid #c084fc",
+                    fontWeight: 700,
+                    borderRadius: "6px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    cursor: "pointer",
+                    boxShadow: "0 2px 10px rgba(168, 85, 247, 0.4)"
+                  }}
+                  title="Verify Cargo Quality Check & Execute Consignee e-POD Signature"
+                >
+                  <ShieldCheck size={13} />
+                  <span>QC & e-POD Sign-off</span>
+                </button>
+              )}
+
               {job.status === "Booked" && (
                 <button
                   type="button"
@@ -624,9 +715,9 @@ export default function AdminConsignmentModal({
                   status={job.status}
                   onArrival={() => {
                     if (job.status === "In Transit") {
-                      handleStatusChange("Delivered");
+                      handleStatusChange("Arrived");
                       toast.success(
-                        `Linehaul Completed: Heavy Vehicle ${job.vehicle} has arrived at destination receiving dock (${job.dropoff}). Status automatically transitioned to Delivered.`,
+                        `Linehaul Completed: Heavy Vehicle ${job.vehicle} has reached destination receiving dock (${job.dropoff}). Status transitioned to "Arrived". Quality Check & e-POD signature are now active.`,
                         "Destination Dock Arrival"
                       );
                     }
@@ -903,6 +994,232 @@ export default function AdminConsignmentModal({
         </div>
 
       </div>
+
+      {/* Quality Check & e-POD Sign-Off Inspection Modal */}
+      {showQcModal && (
+        <div
+          className="modal-backdrop"
+          style={{ zIndex: 10005 }}
+          onClick={() => setShowQcModal(false)}
+        >
+          <div
+            className="modal-dialog"
+            style={{
+              maxWidth: "560px",
+              background: "linear-gradient(180deg, #1e1b4b, #0f172a)",
+              border: "1px solid rgba(168, 85, 247, 0.45)",
+              borderRadius: "14px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.9)",
+              color: "#f8fafc"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="modal-header"
+              style={{
+                padding: "1.1rem 1.35rem",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "8px",
+                    background: "rgba(168, 85, 247, 0.2)",
+                    color: "#c084fc",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>
+                    Dock QC & Consignee e-POD Sign-off
+                  </h3>
+                  <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Consignment #{job.id} • {job.dropoff.split("(")[0]}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowQcModal(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer"
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div
+                style={{
+                  padding: "0.75rem 1rem",
+                  background: "rgba(168, 85, 247, 0.12)",
+                  border: "1px solid rgba(168, 85, 247, 0.3)",
+                  borderRadius: "8px",
+                  fontSize: "0.8rem",
+                  color: "#e9d5ff"
+                }}
+              >
+                Heavy Vehicle <strong>{job.vehicle}</strong> is at the receiving dock. Complete mandatory cargo condition inspection before signing off the official digital proof of delivery.
+              </div>
+
+              {/* QC Checkpoints */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "0.5rem", fontWeight: 600 }}>
+                  Mandatory Cargo Quality Check (QC) Criteria:
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem", cursor: "pointer", background: "rgba(255,255,255,0.04)", padding: "0.45rem 0.75rem", borderRadius: "6px" }}>
+                    <input
+                      type="checkbox"
+                      checked={qcSealIntact}
+                      onChange={(e) => setQcSealIntact(e.target.checked)}
+                      style={{ accentColor: "#a855f7" }}
+                    />
+                    <span>Security Tamper Seals Intact & Verified (FR-07)</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem", cursor: "pointer", background: "rgba(255,255,255,0.04)", padding: "0.45rem 0.75rem", borderRadius: "6px" }}>
+                    <input
+                      type="checkbox"
+                      checked={qcTemperatureOk}
+                      onChange={(e) => setQcTemperatureOk(e.target.checked)}
+                      style={{ accentColor: "#a855f7" }}
+                    />
+                    <span>Reefer Cold Chain / Climate Specifications within Range</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem", cursor: "pointer", background: "rgba(255,255,255,0.04)", padding: "0.45rem 0.75rem", borderRadius: "6px" }}>
+                    <input
+                      type="checkbox"
+                      checked={qcDamageFree}
+                      onChange={(e) => setQcDamageFree(e.target.checked)}
+                      style={{ accentColor: "#a855f7" }}
+                    />
+                    <span>Zero Outer Pallet Crushing or Packaging Compromise</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Consignee Signee Details */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 600 }}>
+                    Receiving Dock Inspector
+                  </label>
+                  <input
+                    type="text"
+                    value={qcInspector}
+                    onChange={(e) => setQcInspector(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem 0.65rem",
+                      borderRadius: "6px",
+                      background: "#0f172a",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      color: "#f8fafc",
+                      fontSize: "0.82rem"
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 600 }}>
+                    Consignee Signatory Name
+                  </label>
+                  <input
+                    type="text"
+                    value={qcSigneeName}
+                    onChange={(e) => setQcSigneeName(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem 0.65rem",
+                      borderRadius: "6px",
+                      background: "#0f172a",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      color: "#f8fafc",
+                      fontSize: "0.82rem"
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.75rem", color: "#cbd5e1", marginBottom: "4px", fontWeight: 600 }}>
+                  Quality Check & Acceptance Audit Notes
+                </label>
+                <textarea
+                  rows={2}
+                  value={qcNotes}
+                  onChange={(e) => setQcNotes(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem 0.65rem",
+                    borderRadius: "6px",
+                    background: "#0f172a",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    color: "#f8fafc",
+                    fontSize: "0.82rem",
+                    resize: "none"
+                  }}
+                />
+              </div>
+            </div>
+
+            <div
+              className="modal-footer"
+              style={{
+                padding: "1rem 1.35rem",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.5rem"
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowQcModal(false)}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: "0.78rem", padding: "0.45rem 0.85rem" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCompleteQcAndDelivery}
+                disabled={isSubmittingQc || !qcSealIntact || !qcDamageFree}
+                className="btn btn-sm"
+                style={{
+                  fontSize: "0.78rem",
+                  padding: "0.45rem 1rem",
+                  background: "linear-gradient(135deg, #059669, #10b981)",
+                  color: "#ffffff",
+                  border: "1px solid #34d399",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  cursor: (isSubmittingQc || !qcSealIntact || !qcDamageFree) ? "not-allowed" : "pointer",
+                  opacity: (!qcSealIntact || !qcDamageFree) ? 0.5 : 1
+                }}
+              >
+                <CheckCircle2 size={14} />
+                <span>{isSubmittingQc ? "Issuing e-POD..." : "Sign e-POD & Mark Delivered"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

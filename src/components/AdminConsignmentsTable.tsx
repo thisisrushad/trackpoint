@@ -529,7 +529,7 @@ export default function AdminConsignmentsTable({
 
         {/* Status Pill Tabs */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-          {["ALL", "Assigned", "In Transit", "Delivered"].map((st) => {
+          {["ALL", "Booked", "Assigned", "In Transit", "Arrived", "Delivered", "Cancelled"].map((st) => {
             const isActive = statusFilter === st;
             return (
               <button
@@ -601,6 +601,7 @@ export default function AdminConsignmentsTable({
                 paginatedJobs.map((job) => {
                   const isDelivered = job.status === "Delivered";
                   const isTransit = job.status === "In Transit";
+                  const isArrived = job.status === "Arrived";
                   const isCancelled = job.status === "Cancelled";
                   const isBooked = job.status === "Booked";
 
@@ -678,6 +679,8 @@ export default function AdminConsignmentsTable({
                               ? "rgba(239, 68, 68, 0.22)"
                               : isDelivered
                               ? "rgba(16, 185, 129, 0.2)"
+                              : isArrived
+                              ? "rgba(168, 85, 247, 0.22)"
                               : isTransit
                               ? "rgba(245, 158, 11, 0.2)"
                               : isBooked
@@ -687,6 +690,8 @@ export default function AdminConsignmentsTable({
                               ? "#fca5a5"
                               : isDelivered
                               ? "#6ee7b7"
+                              : isArrived
+                              ? "#d8b4fe"
                               : isTransit
                               ? "#fcd34d"
                               : isBooked
@@ -697,6 +702,8 @@ export default function AdminConsignmentsTable({
                                 ? "rgba(239, 68, 68, 0.5)"
                                 : isDelivered
                                 ? "rgba(16, 185, 129, 0.4)"
+                                : isArrived
+                                ? "rgba(168, 85, 247, 0.45)"
                                 : isTransit
                                 ? "rgba(245, 158, 11, 0.4)"
                                 : isBooked

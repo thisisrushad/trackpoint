@@ -13,7 +13,7 @@ export interface Job {
   priority: "Standard" | "Express";
   driver: string;
   vehicle: string;
-  status: "Booked" | "Assigned" | "In Transit" | "Delivered" | "Invoiced" | "Cancelled";
+  status: "Booked" | "Assigned" | "In Transit" | "Arrived" | "Delivered" | "Invoiced" | "Cancelled";
   eta: string;
   lat: number;
   lng: number;
