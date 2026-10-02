@@ -164,12 +164,36 @@ export default function AdminConsignmentModal({
     let targetDriver = job.driver;
     let targetVehicle = job.vehicle;
 
-    if (job.overrideReason && job.overrideReason.startsWith("RECOMMENDED_MATCH:")) {
-      const parts = job.overrideReason.split(":");
-      if (parts.length >= 3) {
-        targetVehicle = parts[1];
-        targetDriver = `${parts[2]} (#DRV-AUTO)`;
-      }
+    const driverOptions = [
+      { name: "Liam Chen", value: "Liam Chen (#DRV-101)", vehicle: "Van #NL-01 (HiAce Courier)" },
+      { name: "Dave Miller", value: "Dave Miller (#DRV-104)", vehicle: "Truck #NL-14 (Mack Titan)" },
+      { name: "Sarah Peterson", value: "Sarah Peterson (#DRV-108)", vehicle: "Rigid #NL-08 (Hino 500)" },
+      { name: "Samira Patel", value: "Samira Patel (#DRV-106)", vehicle: "Rigid #NL-06 (Fuso Fighter)" },
+      { name: "Wayne Campbell", value: "Wayne Campbell (#DRV-111)", vehicle: "Semi #NL-11 (Volvo FM)" },
+      { name: "Brett Walker", value: "Brett Walker (#DRV-109)", vehicle: "Semi #NL-09 (Freightliner)" },
+      { name: "Mark Taylor", value: "Mark Taylor (#DRV-112)", vehicle: "Road Train #NL-31 (Kenworth T909)" },
+      { name: "Ian Stewart", value: "Ian Stewart (#DRV-129)", vehicle: "Road Train #NL-29 (Kenworth C509)" }
+    ];
+
+    const rawVehicle = job.vehicle || "";
+    const rawReason = job.overrideReason || "";
+
+    const matched = driverOptions.find(opt => 
+      rawVehicle.toLowerCase().includes(opt.name.toLowerCase()) ||
+      rawReason.toLowerCase().includes(opt.name.toLowerCase()) ||
+      (opt.name === "Liam Chen" && (rawVehicle.includes("NL-01") || rawVehicle.toLowerCase().includes("liam"))) ||
+      (opt.name === "Dave Miller" && (rawVehicle.includes("NL-14") || rawVehicle.toLowerCase().includes("dave"))) ||
+      (opt.name === "Sarah Peterson" && (rawVehicle.includes("NL-08") || rawVehicle.toLowerCase().includes("sarah"))) ||
+      (opt.name === "Samira Patel" && (rawVehicle.includes("NL-06") || rawVehicle.toLowerCase().includes("samira"))) ||
+      (opt.name === "Wayne Campbell" && (rawVehicle.includes("NL-11") || rawVehicle.toLowerCase().includes("wayne"))) ||
+      (opt.name === "Brett Walker" && (rawVehicle.includes("NL-09") || rawVehicle.toLowerCase().includes("brett"))) ||
+      (opt.name === "Mark Taylor" && (rawVehicle.includes("NL-31") || rawVehicle.toLowerCase().includes("mark"))) ||
+      (opt.name === "Ian Stewart" && (rawVehicle.includes("NL-29") || rawVehicle.toLowerCase().includes("ian")))
+    );
+
+    if (matched) {
+      targetDriver = matched.value;
+      targetVehicle = matched.vehicle;
     } else if (job.driver.includes("Pending")) {
       targetDriver = "Dave Miller (#DRV-104)";
       targetVehicle = "Truck #NL-14 (Mack Titan)";
