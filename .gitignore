@@ -15,10 +15,12 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Reports & Word Documents (Ignored as requested)
+# Reports & Documents & Presentations
+docs_and_presentations/
 reports/
 *.docx
 *.pdf
+*.pptx
 
 # Logs
 *.log
