@@ -725,7 +725,7 @@ export default function CustomerOrdersList({
 
                       {/* 6. Status */}
                       <td>
-                        <span className={`badge-status ${job.status === "Cancelled" ? "cancelled" : isDelivered ? "delivered" : job.status === "Arrived" ? "arrived" : "in-transit"}`}>
+                        <span className={`badge-status ${job.status === "Cancelled" ? "cancelled" : isDelivered ? "delivered" : job.status === "QC Passed" ? "qc-passed" : job.status === "Arrived" ? "arrived" : "in-transit"}`}>
                           {job.status}
                         </span>
                       </td>

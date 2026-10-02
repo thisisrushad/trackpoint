@@ -195,7 +195,8 @@ export class JobsService {
             status: "Delivered",
             recipientName: updates.recipientName || "Sandra Wilson",
             signatureDataUrl: updates.signatureDataUrl || null,
-            completedAt: completedTimestamp
+            completedAt: completedTimestamp,
+            overrideReason: updates.overrideReason || "QC_PASSED_AND_EPOD_SIGNED"
           }
         });
       } catch (e) {
@@ -207,6 +208,7 @@ export class JobsService {
         targetJob.recipientName = updates.recipientName || "Sandra Wilson";
         targetJob.signatureDataUrl = updates.signatureDataUrl || null;
         targetJob.completedAt = completedTimestamp;
+        targetJob.overrideReason = updates.overrideReason || "QC_PASSED_AND_EPOD_SIGNED";
       }
 
       // Auto-generate invoice in database

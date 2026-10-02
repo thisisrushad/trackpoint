@@ -86,8 +86,18 @@ export default function DriverApp({
   };
 
   const handleConfirm = async () => {
-    if (activeJob.status !== "Arrived" && activeJob.status !== "Delivered") {
-      toast.warning("Consignment must be docked at destination receiving dock (Status: Arrived) before e-POD can be signed.", "Arrival Required");
+    if (activeJob.status !== "QC Passed" && activeJob.status !== "Delivered") {
+      if (activeJob.status === "Arrived") {
+        toast.warning(
+          "Receiving dock inspection pending. Admin or Depot Inspector must approve Quality Check (QC Passed) before customer signature can be collected.",
+          "QC Approval Required"
+        );
+      } else {
+        toast.warning(
+          "Consignment must be docked at destination receiving bay and pass Admin QC inspection before e-POD can be signed.",
+          "QC & Arrival Required"
+        );
+      }
       return;
     }
 
@@ -164,7 +174,7 @@ export default function DriverApp({
           <div className="driver-card">
             <div className="driver-card-header">
               <span className="job-badge">Job Ref: #{activeJob.id}</span>
-              <span className={`badge-status ${activeJob.status === "Cancelled" ? "cancelled" : activeJob.status === "Delivered" ? "delivered" : "in-transit"}`}>
+              <span className={`badge-status ${activeJob.status === "Cancelled" ? "cancelled" : activeJob.status === "Delivered" ? "delivered" : activeJob.status === "QC Passed" ? "qc-passed" : activeJob.status === "Arrived" ? "arrived" : "in-transit"}`}>
                 {activeJob.status}
               </span>
             </div>
@@ -203,6 +213,36 @@ export default function DriverApp({
             <h4>Electronic Proof of Delivery (FR-07)</h4>
             <p className="text-xs text-muted mb-2">Capture consignee digital signature upon arrival</p>
 
+            {activeJob.status !== "QC Passed" && activeJob.status !== "Delivered" && (
+              <div style={{
+                background: "rgba(245, 158, 11, 0.15)",
+                border: "1px solid rgba(245, 158, 11, 0.4)",
+                padding: "0.5rem 0.75rem",
+                borderRadius: "8px",
+                fontSize: "0.72rem",
+                color: "#fcd34d",
+                marginBottom: "0.75rem"
+              }}>
+                {activeJob.status === "Arrived"
+                  ? "🛡️ Status: Arrived. Quality inspection pending by Admin/Depot. Signature unlocks once marked 'QC Passed'."
+                  : "⚠️ Consignment in transit. Must arrive and pass Admin QC before e-POD can be signed."}
+              </div>
+            )}
+
+            {activeJob.status === "QC Passed" && (
+              <div style={{
+                background: "rgba(14, 165, 233, 0.15)",
+                border: "1px solid rgba(14, 165, 233, 0.4)",
+                padding: "0.5rem 0.75rem",
+                borderRadius: "8px",
+                fontSize: "0.72rem",
+                color: "#7dd3fc",
+                marginBottom: "0.75rem"
+              }}>
+                ✅ Quality Check Passed by Operations. Customer can now inspect and sign e-POD below.
+              </div>
+            )}
+
             <div className="form-group mb-2">
               <label className="text-xs">Recipient Full Name</label>
               <input
@@ -215,22 +255,22 @@ export default function DriverApp({
             </div>
 
             <label className="text-xs">Consignee Sign Here (Touch / Stylus):</label>
-            <div className="signature-pad-wrapper">
+            <div className="signature-pad-wrapper" style={{ opacity: activeJob.status === "QC Passed" || activeJob.status === "Delivered" ? 1 : 0.45 }}>
               <canvas
                 ref={canvasRef}
                 width={280}
                 height={110}
                 className="signature-canvas"
-                onMouseDown={startDraw}
-                onMouseMove={draw}
-                onMouseUp={stopDraw}
-                onMouseLeave={stopDraw}
-                onTouchStart={startDraw}
-                onTouchMove={draw}
-                onTouchEnd={stopDraw}
+                onMouseDown={activeJob.status === "QC Passed" ? startDraw : undefined}
+                onMouseMove={activeJob.status === "QC Passed" ? draw : undefined}
+                onMouseUp={activeJob.status === "QC Passed" ? stopDraw : undefined}
+                onMouseLeave={activeJob.status === "QC Passed" ? stopDraw : undefined}
+                onTouchStart={activeJob.status === "QC Passed" ? startDraw : undefined}
+                onTouchMove={activeJob.status === "QC Passed" ? draw : undefined}
+                onTouchEnd={activeJob.status === "QC Passed" ? stopDraw : undefined}
               />
-              {!hasDrawn && <div className="canvas-placeholder">Sign on the line above</div>}
-              <button type="button" className="btn-clear-sign" onClick={clearCanvas}>
+              {!hasDrawn && <div className="canvas-placeholder">{activeJob.status === "QC Passed" ? "Sign on the line above" : "Locked: Awaiting QC Passed"}</div>}
+              <button type="button" className="btn-clear-sign" onClick={clearCanvas} disabled={activeJob.status !== "QC Passed"}>
                 Clear
               </button>
             </div>
@@ -239,6 +279,7 @@ export default function DriverApp({
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
+                disabled={activeJob.status !== "QC Passed" && activeJob.status !== "Delivered"}
                 onClick={() => toast.info("Camera snapshot attached to POD record (FR-07).", "Photo Attached")}
               >
                 <Camera size={14} />
@@ -246,11 +287,20 @@ export default function DriverApp({
               </button>
               <button
                 type="button"
-                className="btn btn-success btn-block"
+                className={`btn btn-block ${activeJob.status === "QC Passed" ? "btn-success" : "btn-secondary"}`}
+                disabled={activeJob.status !== "QC Passed"}
                 onClick={handleConfirm}
               >
                 <Check size={16} />
-                <span>Confirm Delivery & Generate Invoice</span>
+                <span>
+                  {activeJob.status === "Delivered"
+                    ? "✓ Delivery Already Finalized"
+                    : activeJob.status === "QC Passed"
+                    ? "Confirm Delivery & Generate Invoice"
+                    : activeJob.status === "Arrived"
+                    ? "🔒 Locked (Awaiting QC Passed)"
+                    : "🔒 Locked (In Transit)"}
+                </span>
               </button>
             </div>
           </div>

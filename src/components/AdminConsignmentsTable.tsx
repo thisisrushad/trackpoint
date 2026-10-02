@@ -553,7 +553,7 @@ export default function AdminConsignmentsTable({
 
         {/* Status Pill Tabs */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-          {["ALL", "Booked", "Assigned", "In Transit", "Arrived", "Delivered", "Cancelled"].map((st) => {
+          {["ALL", "Booked", "Assigned", "In Transit", "Arrived", "QC Passed", "Delivered", "Cancelled"].map((st) => {
             const isActive = statusFilter === st;
             return (
               <button
@@ -624,6 +624,7 @@ export default function AdminConsignmentsTable({
               ) : (
                 paginatedJobs.map((job) => {
                   const isDelivered = job.status === "Delivered";
+                  const isQcPassed = job.status === "QC Passed";
                   const isTransit = job.status === "In Transit";
                   const isArrived = job.status === "Arrived";
                   const isCancelled = job.status === "Cancelled";
@@ -703,6 +704,8 @@ export default function AdminConsignmentsTable({
                               ? "rgba(239, 68, 68, 0.22)"
                               : isDelivered
                               ? "rgba(16, 185, 129, 0.2)"
+                              : isQcPassed
+                              ? "rgba(14, 165, 233, 0.22)"
                               : isArrived
                               ? "rgba(168, 85, 247, 0.22)"
                               : isTransit
@@ -714,6 +717,8 @@ export default function AdminConsignmentsTable({
                               ? "#fca5a5"
                               : isDelivered
                               ? "#6ee7b7"
+                              : isQcPassed
+                              ? "#7dd3fc"
                               : isArrived
                               ? "#d8b4fe"
                               : isTransit
@@ -726,6 +731,8 @@ export default function AdminConsignmentsTable({
                                 ? "rgba(239, 68, 68, 0.5)"
                                 : isDelivered
                                 ? "rgba(16, 185, 129, 0.4)"
+                                : isQcPassed
+                                ? "rgba(56, 189, 248, 0.45)"
                                 : isArrived
                                 ? "rgba(168, 85, 247, 0.45)"
                                 : isTransit
@@ -781,17 +788,41 @@ export default function AdminConsignmentsTable({
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "0.25rem",
-                                background: "linear-gradient(135deg, #9333ea, #a855f7)",
+                                background: "linear-gradient(135deg, #0284c7, #38bdf8)",
                                 color: "#ffffff",
-                                border: "1px solid #c084fc",
+                                border: "1px solid #7dd3fc",
                                 fontWeight: 700,
                                 borderRadius: "5px",
-                                boxShadow: "0 2px 8px rgba(168, 85, 247, 0.4)"
+                                boxShadow: "0 2px 8px rgba(56, 189, 248, 0.4)"
                               }}
-                              title="Cargo Dock QC Check & e-POD Sign-off"
+                              title="Inspect Seals & Mark QC Passed"
                             >
                               <ShieldCheck size={11} />
-                              <span>QC / Deliver</span>
+                              <span>Inspect QC</span>
+                            </button>
+                          )}
+
+                          {job.status === "QC Passed" && (
+                            <button
+                              onClick={() => setSelectedJobForModal(job)}
+                              className="btn btn-sm"
+                              style={{
+                                padding: "0.25rem 0.55rem",
+                                fontSize: "0.68rem",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                                background: "linear-gradient(135deg, #059669, #10b981)",
+                                color: "#ffffff",
+                                border: "1px solid #34d399",
+                                fontWeight: 700,
+                                borderRadius: "5px",
+                                boxShadow: "0 2px 8px rgba(16, 185, 129, 0.4)"
+                              }}
+                              title="QC Approved! View e-POD Sign-off / Deliver"
+                            >
+                              <CheckCircle2 size={11} />
+                              <span>Sign / Deliver</span>
                             </button>
                           )}
 

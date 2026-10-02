@@ -14,7 +14,10 @@ import {
   Check,
   Zap,
   Navigation,
-  ArrowRight
+  ArrowRight,
+  Clock,
+  Lock,
+  ShieldCheck
 } from "lucide-react";
 
 import { useSearchParams } from "next/navigation";
@@ -163,8 +166,18 @@ function DriverActiveRunContent() {
   };
 
   const handleConfirmPOD = async () => {
-    if (job.status !== "Arrived") {
-      toast.warning("Consignment must be docked at destination receiving bay (Status: Arrived) before e-POD can be signed.", "Arrival Required");
+    if (job.status !== "QC Passed") {
+      if (job.status === "Arrived") {
+        toast.warning(
+          "Receiving dock inspection pending. Admin or Depot Supervisor must approve Quality Check (QC Passed) before customer signature can be collected.",
+          "QC Approval Required"
+        );
+      } else {
+        toast.warning(
+          "Consignment must be docked at destination receiving bay and pass Admin/Depot QC inspection before e-POD can be signed.",
+          "QC & Arrival Required"
+        );
+      }
       return;
     }
 
@@ -204,6 +217,7 @@ function DriverActiveRunContent() {
   };
 
   const isDelivered = job.status === "Delivered" || job.status === "Invoiced";
+  const isQcPassed = job.status === "QC Passed";
   const isArrived = job.status === "Arrived";
   const isInTransit = job.status === "In Transit";
   const isAssigned = job.status === "Assigned" || job.status === "Booked";
@@ -230,6 +244,8 @@ function DriverActiveRunContent() {
               className={`text-xs font-bold px-3 py-1 rounded-full border ${
                 isDelivered
                   ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                  : isQcPassed
+                  ? "bg-sky-500/20 text-sky-300 border-sky-500/40"
                   : isArrived
                   ? "bg-purple-500/20 text-purple-300 border-purple-500/40"
                   : isInTransit
@@ -241,33 +257,40 @@ function DriverActiveRunContent() {
             </span>
           </div>
 
-          {/* Trip Progression Step Bar */}
-          <div className="grid grid-cols-4 gap-2 mb-5">
-            <div className="bg-slate-900/80 border border-emerald-500/40 rounded-xl p-3 text-center">
-              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 1</div>
+          {/* Trip Progression Step Bar - 5 Comprehensive Stages */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-5">
+            <div className="bg-slate-900/80 border border-emerald-500/40 rounded-xl p-2.5 text-center">
+              <div className="text-[9px] text-slate-400 uppercase font-bold">Step 1</div>
               <div className="text-xs font-bold text-emerald-400 mt-0.5">
                 {!isAssigned ? "✓ Departed" : "Depot Staging"}
               </div>
             </div>
 
-            <div className={`bg-slate-900/80 border rounded-xl p-3 text-center ${isInTransit ? "border-amber-400/60" : isArrived || isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
-              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 2</div>
-              <div className={`text-xs font-bold mt-0.5 ${isArrived || isDelivered ? "text-emerald-400" : isInTransit ? "text-amber-400" : "text-slate-400"}`}>
-                {isArrived || isDelivered ? "✓ Corridor Done" : isInTransit ? "⚡ In Transit" : "En Route"}
+            <div className={`bg-slate-900/80 border rounded-xl p-2.5 text-center ${isInTransit ? "border-amber-400/60" : isArrived || isQcPassed || isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
+              <div className="text-[9px] text-slate-400 uppercase font-bold">Step 2</div>
+              <div className={`text-xs font-bold mt-0.5 ${isArrived || isQcPassed || isDelivered ? "text-emerald-400" : isInTransit ? "text-amber-400" : "text-slate-400"}`}>
+                {isArrived || isQcPassed || isDelivered ? "✓ Corridor Done" : isInTransit ? "⚡ In Transit" : "En Route"}
               </div>
             </div>
 
-            <div className={`bg-slate-900/80 border rounded-xl p-3 text-center ${isArrived ? "border-purple-400/60" : isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
-              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 3</div>
-              <div className={`text-xs font-bold mt-0.5 ${isDelivered ? "text-emerald-400" : isArrived ? "text-purple-300" : "text-slate-400"}`}>
-                {isDelivered ? "✓ Docked" : isArrived ? "🏁 Docked at Bay" : "Dock Arrival"}
+            <div className={`bg-slate-900/80 border rounded-xl p-2.5 text-center ${isArrived ? "border-purple-400/60" : isQcPassed || isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
+              <div className="text-[9px] text-slate-400 uppercase font-bold">Step 3</div>
+              <div className={`text-xs font-bold mt-0.5 ${isQcPassed || isDelivered ? "text-emerald-400" : isArrived ? "text-purple-300" : "text-slate-400"}`}>
+                {isQcPassed || isDelivered ? "✓ Docked" : isArrived ? "🏁 Docked" : "Dock Arrival"}
               </div>
             </div>
 
-            <div className={`bg-slate-900/80 border rounded-xl p-3 text-center ${isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
-              <div className="text-[10px] text-slate-400 uppercase font-bold">Step 4</div>
-              <div className={`text-xs font-bold mt-0.5 ${isDelivered ? "text-emerald-400" : "text-slate-400"}`}>
-                {isDelivered ? "✓ e-POD Signed" : "QC & e-POD"}
+            <div className={`bg-slate-900/80 border rounded-xl p-2.5 text-center ${isQcPassed ? "border-sky-400/60" : isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
+              <div className="text-[9px] text-slate-400 uppercase font-bold">Step 4</div>
+              <div className={`text-xs font-bold mt-0.5 ${isDelivered ? "text-emerald-400" : isQcPassed ? "text-sky-300" : isArrived ? "text-amber-300" : "text-slate-400"}`}>
+                {isDelivered ? "✓ QC Passed" : isQcPassed ? "🛡️ QC Approved" : isArrived ? "⏳ QC Pending" : "QC Inspection"}
+              </div>
+            </div>
+
+            <div className={`bg-slate-900/80 border rounded-xl p-2.5 text-center ${isDelivered ? "border-emerald-500/40" : "border-white/10"}`}>
+              <div className="text-[9px] text-slate-400 uppercase font-bold">Step 5</div>
+              <div className={`text-xs font-bold mt-0.5 ${isDelivered ? "text-emerald-400" : isQcPassed ? "text-emerald-400" : "text-slate-400"}`}>
+                {isDelivered ? "✓ e-POD Signed" : isQcPassed ? "✍️ Ready to Sign" : "e-POD Receipt"}
               </div>
             </div>
           </div>
@@ -330,8 +353,42 @@ function DriverActiveRunContent() {
             {isArrived && (
               <div className="bg-purple-500/15 border border-purple-500/40 rounded-xl p-3.5 flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-2 text-purple-300 text-xs font-bold">
+                  <Clock size={16} />
+                  <span>Vehicle Docked at Receiving Bay — Awaiting Admin / Depot QC Approval (QC Passed)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsUpdating(true);
+                    try {
+                      const res = await fetch(`/api/jobs/${job.id}`);
+                      const data = await res.json();
+                      if (data.job) {
+                        setJob(data.job);
+                        if (data.job.status === "QC Passed") {
+                          toast.success("QC has been approved by Operations! Signature pad is now unlocked.", "QC Passed");
+                        } else {
+                          toast.info("Status is still awaiting QC approval by Admin/Depot Inspector.", "QC In Progress");
+                        }
+                      }
+                    } catch (e) {
+                      toast.error("Failed to check QC status.", "Error");
+                    } finally {
+                      setIsUpdating(false);
+                    }
+                  }}
+                  className="py-2 px-3.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md transition cursor-pointer"
+                >
+                  Check QC Status 🔄
+                </button>
+              </div>
+            )}
+
+            {isQcPassed && (
+              <div className="bg-sky-500/15 border border-sky-500/40 rounded-xl p-3.5 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2 text-sky-300 text-xs font-bold">
                   <CheckCircle2 size={16} />
-                  <span>Vehicle Docked at Receiving Bay — Proceed with QC Verification & e-POD</span>
+                  <span>Quality Check Passed! Consignee may now inspect goods & sign digital e-POD below.</span>
                 </div>
                 <button
                   type="button"
@@ -339,9 +396,9 @@ function DriverActiveRunContent() {
                     const el = document.getElementById("pod-signature-box");
                     el?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="py-2 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition"
+                  className="py-2 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer"
                 >
-                  Open e-POD Pad ➔
+                  Collect Signature ➔
                 </button>
               </div>
             )}
@@ -473,20 +530,34 @@ function DriverActiveRunContent() {
               ref={canvasRef}
               width={420}
               height={144}
-              className="w-full h-full touch-none cursor-crosshair"
-              onMouseDown={startDraw}
-              onMouseMove={draw}
-              onMouseUp={stopDraw}
-              onMouseLeave={stopDraw}
-              onTouchStart={startDraw}
-              onTouchMove={draw}
-              onTouchEnd={stopDraw}
+              className={`w-full h-full touch-none ${isQcPassed ? "cursor-crosshair" : "cursor-not-allowed opacity-40"}`}
+              onMouseDown={isQcPassed ? startDraw : undefined}
+              onMouseMove={isQcPassed ? draw : undefined}
+              onMouseUp={isQcPassed ? stopDraw : undefined}
+              onMouseLeave={isQcPassed ? stopDraw : undefined}
+              onTouchStart={isQcPassed ? startDraw : undefined}
+              onTouchMove={isQcPassed ? draw : undefined}
+              onTouchEnd={isQcPassed ? stopDraw : undefined}
             />
 
             {!hasDrawn && !job.signatureDataUrl && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs pointer-events-none gap-1">
-                <span>✍️ Sign directly on screen</span>
-                <span className="text-[10px] opacity-75">(Receiver signature required)</span>
+                {isQcPassed ? (
+                  <>
+                    <span>✍️ Sign directly on screen</span>
+                    <span className="text-[10px] opacity-75">(Receiver signature required)</span>
+                  </>
+                ) : isArrived ? (
+                  <>
+                    <span className="text-amber-400 font-bold">🔒 Locked: Quality Check Pending</span>
+                    <span className="text-[10px] text-slate-400">Admin must approve QC before signature can be collected</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-amber-400 font-bold">🔒 Locked: Vehicle in Transit</span>
+                    <span className="text-[10px] text-slate-400">Truck must arrive and pass QC first</span>
+                  </>
+                )}
               </div>
             )}
 
@@ -499,11 +570,31 @@ function DriverActiveRunContent() {
         </div>
 
         {/* Lockout Notice when still in transit or assigned */}
-        {!isArrived && !isDelivered && (
+        {!isArrived && !isQcPassed && !isDelivered && (
           <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-300 flex items-center gap-2">
             <span className="text-base">⚠️</span>
             <span>
-              <strong>e-POD Locked in Transit:</strong> Consignment must dock at destination receiving dock (Status: Arrived) before receiver can sign off.
+              <strong>e-POD Locked in Transit:</strong> Consignment must arrive at destination bay and pass Quality Check before receiver can sign off.
+            </span>
+          </div>
+        )}
+
+        {/* Lockout Notice when Arrived but QC Pending */}
+        {isArrived && (
+          <div className="bg-purple-500/15 border border-purple-500/40 rounded-xl p-3 text-xs text-purple-300 flex items-center gap-2">
+            <span className="text-base">🛡️</span>
+            <span>
+              <strong>Quality Inspection Required:</strong> Vehicle docked. Awaiting Admin / Depot Receiving Inspector to certify seals & cold-chain and mark status <em>"QC Passed"</em>.
+            </span>
+          </div>
+        )}
+
+        {/* Unlocked Notice when QC Passed */}
+        {isQcPassed && (
+          <div className="bg-emerald-500/15 border border-emerald-500/40 rounded-xl p-3 text-xs text-emerald-300 flex items-center gap-2">
+            <span className="text-base">✅</span>
+            <span>
+              <strong>QC Verified & Passed:</strong> Pad unlocked. Please collect Consignee signature and confirm delivery to generate official tax invoice.
             </span>
           </div>
         )}
@@ -512,7 +603,7 @@ function DriverActiveRunContent() {
         <div className="space-y-2.5 pt-2">
           <button
             type="button"
-            disabled={!isArrived && !isDelivered}
+            disabled={!isQcPassed && !isDelivered}
             onClick={() => {
               setPhotoAttached(true);
               toast.success("Delivery dock cargo snapshot attached.", "Photo Attached");
@@ -525,10 +616,10 @@ function DriverActiveRunContent() {
 
           <button
             type="button"
-            disabled={isUpdating || !isArrived}
+            disabled={isUpdating || !isQcPassed}
             onClick={handleConfirmPOD}
             className={`w-full py-3.5 rounded-xl font-extrabold text-sm shadow-xl flex items-center justify-center gap-2 transition ${
-              isArrived
+              isQcPassed
                 ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/30 cursor-pointer"
                 : "bg-slate-800 text-slate-500 border border-white/5 cursor-not-allowed"
             }`}
@@ -539,9 +630,11 @@ function DriverActiveRunContent() {
                 ? "Submitting e-POD..."
                 : isDelivered
                 ? "✓ Delivery Already Finalized"
-                : isArrived
+                : isQcPassed
                 ? "Sign e-POD & Complete Delivery"
-                : "e-POD Locked (Awaiting Dock Arrival)"}
+                : isArrived
+                ? "🔒 e-POD Locked (Awaiting QC Passed)"
+                : "🔒 e-POD Locked (In Transit)"}
             </span>
           </button>
         </div>

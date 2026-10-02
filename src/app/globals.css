@@ -805,6 +805,12 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus {
   border: 1px solid rgba(168, 85, 247, 0.45);
 }
 
+.qc-passed {
+  background: rgba(14, 165, 233, 0.22);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+}
+
 .cancelled {
   background: rgba(239, 68, 68, 0.22);
   color: #fca5a5;

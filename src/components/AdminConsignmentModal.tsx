@@ -101,7 +101,7 @@ export default function AdminConsignmentModal({
     }
   };
 
-  const handleStatusChange = async (newStatus: "Assigned" | "In Transit" | "Arrived" | "Delivered" | "Cancelled", reasonCode?: string) => {
+  const handleStatusChange = async (newStatus: "Assigned" | "In Transit" | "Arrived" | "QC Passed" | "Delivered" | "Cancelled", reasonCode?: string) => {
     setIsUpdating(true);
     try {
       const res = await fetch(`/api/jobs/${job.id}`, {
@@ -127,33 +127,32 @@ export default function AdminConsignmentModal({
     }
   };
 
-  const handleCompleteQcAndDelivery = async () => {
+  const handlePassQc = async () => {
     setIsSubmittingQc(true);
     try {
-      const completedTimestamp = new Date().toISOString();
+      const verifiedTimestamp = new Date().toISOString();
       const res = await fetch(`/api/jobs/${job.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "Delivered",
+          status: "QC Passed",
           recipientName: qcSigneeName,
-          completedAt: completedTimestamp,
-          overrideReason: `QC_VERIFIED: Seal=${qcSealIntact ? 'PASS' : 'FAIL'}, Temp=${qcTemperatureOk ? 'PASS' : 'FAIL'}, Condition=${qcDamageFree ? 'PASS' : 'FAIL'} | Inspector=${qcInspector} | Notes=${qcNotes}`
+          overrideReason: `QC_VERIFIED_PASS: Seal=${qcSealIntact ? 'PASS' : 'FAIL'}, Temp=${qcTemperatureOk ? 'PASS' : 'FAIL'}, Condition=${qcDamageFree ? 'PASS' : 'FAIL'} | Inspector=${qcInspector} | Notes=${qcNotes} | ${verifiedTimestamp}`
         })
       });
       const data = await res.json();
       if (data.success && data.job) {
         onJobUpdated(data.job);
         toast.success(
-          `Dock Quality Check Passed! Consignment #${job.id} signed off by ${qcSigneeName}. Official e-POD & Tax Invoice issued.`,
-          "QC Inspection & e-POD Complete (FR-11)"
+          `Quality Check PASSED for Consignment #${job.id} by ${qcInspector}! Status updated to "QC Passed". Driver can now capture final e-POD signature.`,
+          "QC Inspection Verified (FR-11)"
         );
         setShowQcModal(false);
       } else {
-        toast.error("Failed to complete delivery sign-off.", "Error");
+        toast.error("Failed to approve QC inspection in database.", "Error");
       }
     } catch (err: any) {
-      toast.error(err.message || "Network error", "QC Submission Failed");
+      toast.error(err.message || "Network error", "QC Verification Failed");
     } finally {
       setIsSubmittingQc(false);
     }
@@ -432,9 +431,31 @@ export default function AdminConsignmentModal({
                 Arrived
               </button>
               <button
+                disabled={isUpdating || job.status === "QC Passed"}
+                onClick={() => {
+                  if (job.status !== "QC Passed") {
+                    setShowQcModal(true);
+                  }
+                }}
+                style={{
+                  padding: "0.3rem 0.65rem",
+                  fontSize: "0.75rem",
+                  borderRadius: "6px",
+                  background: job.status === "QC Passed" ? "rgba(14, 165, 233, 0.3)" : "rgba(255, 255, 255, 0.05)",
+                  color: job.status === "QC Passed" ? "#7dd3fc" : "#cbd5e1",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  cursor: "pointer"
+                }}
+                title="Verify Cargo Quality Check (Set QC Passed)"
+              >
+                QC Passed
+              </button>
+              <button
                 disabled={isUpdating || job.status === "Delivered"}
                 onClick={() => {
-                  if (job.status !== "Delivered") {
+                  if (job.status === "QC Passed") {
+                    handleStatusChange("Delivered");
+                  } else if (job.status !== "Delivered") {
                     setShowQcModal(true);
                   }
                 }}
@@ -447,9 +468,9 @@ export default function AdminConsignmentModal({
                   border: "1px solid rgba(255, 255, 255, 0.1)",
                   cursor: "pointer"
                 }}
-                title={job.status === "Delivered" ? "Consignment Delivered" : "Perform Mandatory QC Inspection & Sign e-POD"}
+                title={job.status === "Delivered" ? "Consignment Delivered" : "Finalize Consignment Delivery"}
               >
-                {job.status === "Delivered" ? "Delivered" : "QC / Deliver ➔"}
+                {job.status === "Delivered" ? "Delivered" : "Deliver ➔"}
               </button>
               {job.status !== "Delivered" && job.status !== "Invoiced" && job.status !== "Cancelled" && (
                 <button
@@ -477,8 +498,8 @@ export default function AdminConsignmentModal({
             </div>
 
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              {/* If Arrived at Destination Dock, show prominent QC & e-POD Sign-Off Button */}
-              {(job.status === "Arrived" || (isArrived && !isDelivered)) && (
+              {/* If Arrived at Destination Dock, show prominent QC Inspection Button */}
+              {job.status === "Arrived" && (
                 <button
                   type="button"
                   disabled={isUpdating}
@@ -487,21 +508,21 @@ export default function AdminConsignmentModal({
                   style={{
                     fontSize: "0.75rem",
                     padding: "0.35rem 0.85rem",
-                    background: "linear-gradient(135deg, #9333ea, #a855f7)",
+                    background: "linear-gradient(135deg, #0284c7, #38bdf8)",
                     color: "#ffffff",
-                    border: "1px solid #c084fc",
+                    border: "1px solid #7dd3fc",
                     fontWeight: 700,
                     borderRadius: "6px",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "0.35rem",
                     cursor: "pointer",
-                    boxShadow: "0 2px 10px rgba(168, 85, 247, 0.4)"
+                    boxShadow: "0 2px 10px rgba(56, 189, 248, 0.4)"
                   }}
-                  title="Verify Cargo Quality Check & Execute Consignee e-POD Signature"
+                  title="Verify Cargo Security Seal & Temperature (Set QC Passed)"
                 >
                   <ShieldCheck size={13} />
-                  <span>QC & e-POD Sign-off</span>
+                  <span>Inspect & Approve QC</span>
                 </button>
               )}
 
@@ -1225,15 +1246,15 @@ export default function AdminConsignmentModal({
               </button>
               <button
                 type="button"
-                onClick={handleCompleteQcAndDelivery}
+                onClick={handlePassQc}
                 disabled={isSubmittingQc || !qcSealIntact || !qcDamageFree}
                 className="btn btn-sm"
                 style={{
                   fontSize: "0.78rem",
                   padding: "0.45rem 1rem",
-                  background: "linear-gradient(135deg, #059669, #10b981)",
+                  background: "linear-gradient(135deg, #0284c7, #38bdf8)",
                   color: "#ffffff",
-                  border: "1px solid #34d399",
+                  border: "1px solid #7dd3fc",
                   fontWeight: 700,
                   display: "inline-flex",
                   alignItems: "center",
@@ -1243,7 +1264,7 @@ export default function AdminConsignmentModal({
                 }}
               >
                 <CheckCircle2 size={14} />
-                <span>{isSubmittingQc ? "Issuing e-POD..." : "Sign e-POD & Mark Delivered"}</span>
+                <span>{isSubmittingQc ? "Verifying QC..." : "Approve Quality Check (Set QC Passed)"}</span>
               </button>
             </div>
           </div>

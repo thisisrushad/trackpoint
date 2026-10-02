@@ -263,6 +263,8 @@ export default function ConsignmentDetailsPage() {
                     fontWeight: 700,
                     background: isDelivered
                       ? "rgba(16, 185, 129, 0.2)"
+                      : job.status === "QC Passed"
+                      ? "rgba(14, 165, 233, 0.22)"
                       : isArrived
                       ? "rgba(168, 85, 247, 0.22)"
                       : isInTransit
@@ -272,6 +274,8 @@ export default function ConsignmentDetailsPage() {
                       : "rgba(59, 130, 246, 0.2)",
                     color: isDelivered
                       ? "#6ee7b7"
+                      : job.status === "QC Passed"
+                      ? "#7dd3fc"
                       : isArrived
                       ? "#d8b4fe"
                       : isInTransit
@@ -282,6 +286,8 @@ export default function ConsignmentDetailsPage() {
                     border: `1px solid ${
                       isDelivered
                         ? "rgba(16, 185, 129, 0.4)"
+                        : job.status === "QC Passed"
+                        ? "rgba(56, 189, 248, 0.45)"
                         : isArrived
                         ? "rgba(168, 85, 247, 0.45)"
                         : isInTransit
