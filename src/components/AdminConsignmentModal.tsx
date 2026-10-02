@@ -622,6 +622,15 @@ export default function AdminConsignmentModal({
                   pickupAddress={job.pickup}
                   dropoffAddress={job.dropoff}
                   status={job.status}
+                  onArrival={() => {
+                    if (job.status === "In Transit") {
+                      handleStatusChange("Delivered");
+                      toast.success(
+                        `Linehaul Completed: Heavy Vehicle ${job.vehicle} has arrived at destination receiving dock (${job.dropoff}). Status automatically transitioned to Delivered.`,
+                        "Destination Dock Arrival"
+                      );
+                    }
+                  }}
                 />
               </div>
             </div>

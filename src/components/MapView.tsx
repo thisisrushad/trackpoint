@@ -15,6 +15,7 @@ interface MapViewProps {
   dropoffAddress?: string;
   status?: string;
   height?: string;
+  onArrival?: () => void;
 }
 
 // Master Stuart Highway Corridor sequence from North (Darwin) to South (Alice Springs)
@@ -41,7 +42,7 @@ const MASTER_STUART_CORRIDOR: { name: string; coords: [number, number] }[] = [
 function generateCorridorPoints(
   startCoords: [number, number],
   endCoords: [number, number],
-  stepsPerSegment = 12
+  stepsPerSegment = 48
 ): [number, number][] {
   // Determine if trip is southbound (North to South, lat decreasing) or northbound
   const isSouthbound = startCoords[0] > endCoords[0];
@@ -88,7 +89,8 @@ export default function MapView({
   pickupAddress = "Darwin Depot (120 Berrimah Rd, Darwin)",
   dropoffAddress = "Katherine Store (Katherine Terrace)",
   status = "In Transit",
-  height = "500px"
+  height = "500px",
+  onArrival
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -110,32 +112,42 @@ export default function MapView({
   // Live movement simulation state
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1);
+  const [hasReachedDestination, setHasReachedDestination] = useState<boolean>(isDelivered);
   const [stepIndex, setStepIndex] = useState<number>(() => {
-    // If in transit, start at roughly ~25% through the journey for instant demonstration
-    if (isInTransit) return Math.min(15, Math.floor(corridorPoints.length * 0.25));
     if (isDelivered) return corridorPoints.length - 1;
+    // For live demonstration: start at ~30% through the trip
+    if (isInTransit) return Math.min(corridorPoints.length - 1, Math.floor(corridorPoints.length * 0.3));
     return 0;
   });
 
-  const [currentSpeed, setCurrentSpeed] = useState<number>(88);
+  const [currentSpeed, setCurrentSpeed] = useState<number>(() => (isDelivered ? 0 : 86));
   const [autoCenter, setAutoCenter] = useState<boolean>(false);
+
+  // Effective status accounting for local live arrival
+  const effectiveStatus = hasReachedDestination
+    ? "Arrived & Docked"
+    : isDelivered
+    ? "Delivered"
+    : status;
+
+  const isActuallyDocked = isDelivered || hasReachedDestination;
 
   // Active coordinates
   const currentCoords = useMemo<[number, number]>(() => {
-    if (isDelivered) return dropoffCoords;
+    if (isActuallyDocked) return dropoffCoords;
     if (isAssigned) return pickupCoords;
     if (corridorPoints.length === 0) return [truckLat || -12.9540, truckLng || 131.7820];
     const safeIdx = Math.min(Math.max(0, stepIndex), corridorPoints.length - 1);
     return corridorPoints[safeIdx];
-  }, [isDelivered, isAssigned, corridorPoints, stepIndex, dropoffCoords, pickupCoords, truckLat, truckLng]);
+  }, [isActuallyDocked, isAssigned, corridorPoints, stepIndex, dropoffCoords, pickupCoords, truckLat, truckLng]);
 
   // Calculate percentage of journey completed
   const progressPercent = useMemo(() => {
-    if (isDelivered) return 100;
+    if (isActuallyDocked) return 100;
     if (isAssigned) return 0;
     if (corridorPoints.length <= 1) return 0;
     return Math.round((stepIndex / (corridorPoints.length - 1)) * 100);
-  }, [stepIndex, corridorPoints.length, isDelivered, isAssigned]);
+  }, [stepIndex, corridorPoints.length, isActuallyDocked, isAssigned]);
 
   // Initialize Map
   useEffect(() => {
@@ -183,13 +195,13 @@ export default function MapView({
     // Destination Marker (Dropoff)
     L.circleMarker(dropoffCoords, {
       radius: 9,
-      fillColor: isDelivered ? "#10b981" : "#ef4444",
+      fillColor: isActuallyDocked ? "#10b981" : "#ef4444",
       color: "#ffffff",
       weight: 3,
       fillOpacity: 1
     }).addTo(map).bindPopup(
       `<b>Destination Dock:</b><br>${dropoffAddress}<br>${
-        isDelivered ? "<b>✅ Status: Delivered & e-POD Signed</b>" : "<b>⏳ Pending Highway Linehaul Arrival</b>"
+        isActuallyDocked ? "<b>✅ Status: Arrived at Receiving Dock</b>" : "<b>⏳ Pending Highway Linehaul Arrival</b>"
       }`
     );
 
@@ -207,28 +219,28 @@ export default function MapView({
         border-radius: 9999px;
         font-size: 11px;
         font-weight: 800;
-        border: 2px solid ${isDelivered ? "#10b981" : isAssigned ? "#38bdf8" : "#60a5fa"};
-        box-shadow: 0 0 16px ${isDelivered ? "rgba(16,185,129,0.8)" : isAssigned ? "rgba(56,189,248,0.8)" : "rgba(96,165,250,0.8)"};
+        border: 2px solid ${isActuallyDocked ? "#10b981" : isAssigned ? "#38bdf8" : "#60a5fa"};
+        box-shadow: 0 0 16px ${isActuallyDocked ? "rgba(16,185,129,0.8)" : isAssigned ? "rgba(56,189,248,0.8)" : "rgba(96,165,250,0.8)"};
         white-space: nowrap;
       ">
         <span style="
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: ${isDelivered ? "#10b981" : isAssigned ? "#38bdf8" : "#38bdf8"};
-          box-shadow: 0 0 8px ${isDelivered ? "#10b981" : "#38bdf8"};
+          background: ${isActuallyDocked ? "#10b981" : "#38bdf8"};
+          box-shadow: 0 0 8px ${isActuallyDocked ? "#10b981" : "#38bdf8"};
           display: inline-block;
           animation: pulse-green 1.2s infinite;
         "></span>
-        <span>🚚 ${isDelivered ? "Docked: " : isAssigned ? "Staged: " : "Moving: "}${shortVehicleName}</span>
+        <span>🚚 ${isActuallyDocked ? "Docked: " : isAssigned ? "Staged: " : "En Route: "}${shortVehicleName}</span>
       </div>
     `;
 
     const truckIcon = L.divIcon({
       className: "custom-live-truck-icon",
       html: iconHtml,
-      iconSize: [180, 32],
-      iconAnchor: [90, 16]
+      iconSize: [195, 32],
+      iconAnchor: [97, 16]
     });
 
     const marker = L.marker(currentCoords, { icon: truckIcon }).addTo(map);
@@ -270,61 +282,109 @@ export default function MapView({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [corridorPoints, pickupCoords, dropoffCoords, isDelivered, isAssigned, vehicleName, pickupAddress, dropoffAddress]);
+  }, [corridorPoints, pickupCoords, dropoffCoords, isDelivered, isActuallyDocked, isAssigned, vehicleName, pickupAddress, dropoffAddress]);
 
-  // Live Movement Animation Loop (Runs when In Transit and isPlaying)
+  // Live Movement Animation Loop: Smooth, steady, real-time pace
   useEffect(() => {
-    if (!isInTransit || !isPlaying || corridorPoints.length === 0) return;
+    if (!isInTransit || !isPlaying || hasReachedDestination || corridorPoints.length === 0) return;
 
-    // Timer interval scales with speedMultiplier
-    const intervalMs = Math.max(120, Math.floor(800 / speedMultiplier));
+    // Smooth, perceptible tick cadence: ~650ms base interval scaled by speedMultiplier
+    const intervalMs = Math.max(160, Math.floor(650 / speedMultiplier));
 
     const timer = setInterval(() => {
       setStepIndex((prev) => {
         if (prev >= corridorPoints.length - 1) {
-          // Loop seamlessly back to start of Stuart Highway for continuous demo
-          return 0;
+          // Reached destination! Update status and stop rather than looping instantly
+          setHasReachedDestination(true);
+          setCurrentSpeed(0);
+          if (onArrival) {
+            onArrival();
+          }
+          return corridorPoints.length - 1;
         }
         return prev + 1;
       });
 
-      // Natural telematics speed fluctuation around 88 km/h
-      const jitter = Math.floor(Math.random() * 7) - 3;
-      setCurrentSpeed(88 + jitter);
+      // Natural telematics highway speed fluctuation (82 - 90 km/h)
+      const jitter = Math.floor(Math.random() * 5) - 2;
+      setCurrentSpeed(86 + jitter);
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [isInTransit, isPlaying, speedMultiplier, corridorPoints.length]);
+  }, [isInTransit, isPlaying, hasReachedDestination, speedMultiplier, corridorPoints.length, onArrival]);
 
-  // Synchronize Marker Position & Traveled Polyline
+  // Synchronize Marker Position, Custom HTML Icon, & Traveled Polyline
   useEffect(() => {
     if (!truckMarkerRef.current) return;
 
     truckMarkerRef.current.setLatLng(currentCoords);
+
+    // Update marker custom icon when docking status changes
+    const shortVehicleName = vehicleName.split("(")[0].trim() || vehicleName;
+    const updatedIconHtml = `
+      <div style="
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(15, 23, 42, 0.95);
+        color: #f8fafc;
+        padding: 5px 12px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 800;
+        border: 2px solid ${isActuallyDocked ? "#10b981" : isAssigned ? "#38bdf8" : "#60a5fa"};
+        box-shadow: 0 0 16px ${isActuallyDocked ? "rgba(16,185,129,0.8)" : isAssigned ? "rgba(56,189,248,0.8)" : "rgba(96,165,250,0.8)"};
+        white-space: nowrap;
+      ">
+        <span style="
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: ${isActuallyDocked ? "#10b981" : "#38bdf8"};
+          box-shadow: 0 0 8px ${isActuallyDocked ? "#10b981" : "#38bdf8"};
+          display: inline-block;
+          animation: pulse-green 1.2s infinite;
+        "></span>
+        <span>🚚 ${isActuallyDocked ? "Docked: " : isAssigned ? "Staged: " : "En Route: "}${shortVehicleName}</span>
+      </div>
+    `;
+
+    truckMarkerRef.current.setIcon(
+      L.divIcon({
+        className: "custom-live-truck-icon",
+        html: updatedIconHtml,
+        iconSize: [195, 32],
+        iconAnchor: [97, 16]
+      })
+    );
 
     // Update marker popup content
     truckMarkerRef.current.bindPopup(`
       <div style="font-family: inherit; font-size: 12px; line-height: 1.4;">
         <strong style="color:#38bdf8; font-size: 13px;">${vehicleName}</strong><br/>
         <span>Driver: <b>${driverName}</b></span><br/>
-        <span>Corridor Status: <b style="color:${isDelivered ? '#10b981' : '#38bdf8'};">${status}</b></span><br/>
-        <span>Telemetry Speed: <b>${isInTransit ? `${currentSpeed} km/h` : '0 km/h'}</b></span><br/>
+        <span>Corridor Status: <b style="color:${isActuallyDocked ? '#10b981' : '#38bdf8'};">${effectiveStatus}</b></span><br/>
+        <span>Telemetry Speed: <b>${isActuallyDocked ? '0 km/h (Docked)' : `${currentSpeed} km/h`}</b></span><br/>
         <span>Route Progress: <b>${progressPercent}% Complete</b></span><br/>
         <span style="color:#94a3b8; font-size: 10px;">GPS: ${currentCoords[0].toFixed(4)}°, ${currentCoords[1].toFixed(4)}°</span>
       </div>
     `);
 
     // Update traveled green route polyline
-    if (traveledPolylineRef.current && isInTransit) {
-      const traveledSlice = corridorPoints.slice(0, stepIndex + 1);
-      traveledPolylineRef.current.setLatLngs(traveledSlice);
+    if (traveledPolylineRef.current) {
+      if (isActuallyDocked) {
+        traveledPolylineRef.current.setLatLngs(corridorPoints);
+      } else if (isInTransit) {
+        const traveledSlice = corridorPoints.slice(0, stepIndex + 1);
+        traveledPolylineRef.current.setLatLngs(traveledSlice);
+      }
     }
 
     // Auto-pan if enabled without animation stacking to prevent tile desynchronization
-    if (autoCenter && mapInstanceRef.current && isInTransit) {
+    if (autoCenter && mapInstanceRef.current && isInTransit && !isActuallyDocked) {
       mapInstanceRef.current.panTo(currentCoords, { animate: false });
     }
-  }, [currentCoords, isInTransit, isDelivered, stepIndex, corridorPoints, vehicleName, driverName, status, currentSpeed, progressPercent, autoCenter]);
+  }, [currentCoords, isInTransit, isActuallyDocked, isAssigned, stepIndex, corridorPoints, vehicleName, driverName, effectiveStatus, currentSpeed, progressPercent, autoCenter]);
 
   // Recenter / Fit Route Bounds
   const handleFitRoute = () => {
@@ -354,6 +414,9 @@ export default function MapView({
   // Reset truck position to start
   const handleResetToStart = () => {
     setStepIndex(0);
+    setHasReachedDestination(false);
+    setCurrentSpeed(86);
+    setIsPlaying(true);
     if (truckMarkerRef.current && corridorPoints.length > 0) {
       truckMarkerRef.current.setLatLng(corridorPoints[0]);
     }
@@ -375,7 +438,7 @@ export default function MapView({
         style={{
           background: "rgba(15, 23, 42, 0.94)",
           backdropFilter: "blur(8px)",
-          border: `1px solid ${isDelivered ? "rgba(16, 185, 129, 0.4)" : isAssigned ? "rgba(56, 189, 248, 0.4)" : "rgba(96, 165, 250, 0.4)"}`,
+          border: `1px solid ${isActuallyDocked ? "rgba(16, 185, 129, 0.4)" : isAssigned ? "rgba(56, 189, 248, 0.4)" : "rgba(96, 165, 250, 0.4)"}`,
           padding: "0.45rem 0.85rem",
           borderRadius: "9999px",
           position: "absolute",
@@ -388,9 +451,9 @@ export default function MapView({
           gap: "8px"
         }}
       >
-        {isDelivered ? (
+        {isActuallyDocked ? (
           <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: "5px" }}>
-            <span>✅</span> Delivered & Signed at Destination • Docked (0 km/h)
+            <span>✅</span> {hasReachedDestination ? "Linehaul Completed • Docked at Destination" : "Delivered & Signed at Destination • Docked"} (0 km/h)
           </span>
         ) : isAssigned ? (
           <span style={{ color: "#38bdf8", fontWeight: 700, fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: "5px" }}>
