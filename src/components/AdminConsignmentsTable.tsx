@@ -680,6 +680,7 @@ export default function AdminConsignmentsTable({
 
                       {/* Action Buttons */}
                       <td style={{ padding: "0.85rem 1rem", verticalAlign: "middle", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: "0.4rem" }}>
                           {job.status === "Booked" && (
                             <button
                               onClick={() => handleApproveJob(job)}

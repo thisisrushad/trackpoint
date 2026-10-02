@@ -80,14 +80,15 @@ export default function AdminConsignmentModal({
     }
   };
 
-  const handleStatusChange = async (newStatus: "Assigned" | "In Transit" | "Delivered") => {
+  const handleStatusChange = async (newStatus: "Assigned" | "In Transit" | "Delivered" | "Cancelled", reasonCode?: string) => {
     setIsUpdating(true);
     try {
       const res = await fetch(`/api/jobs/${job.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: newStatus
+          status: newStatus,
+          ...(newStatus === "Cancelled" ? { action: "cancel", reasonCode: reasonCode || "ADMIN_CANCELLATION" } : {})
         })
       });
       const data = await res.json();
@@ -317,7 +318,7 @@ export default function AdminConsignmentModal({
                   onClick={() => {
                     const reason = window.prompt("Enter Mandatory Cancellation Reason Code (e.g. ROAD_CLOSURE, CARGO_LIMIT, CUSTOMER_CANCEL):", "CUSTOMER_REQUESTED");
                     if (reason) {
-                      handleStatusChange("Cancelled");
+                      handleStatusChange("Cancelled", reason);
                     }
                   }}
                   style={{
