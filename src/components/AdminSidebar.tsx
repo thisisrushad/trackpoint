@@ -50,9 +50,9 @@ export default function AdminSidebar({
   onRefreshDB,
   isRefreshing = false,
   userProfile = {
-    name: "Priya Sharma",
-    org: "NorthLine Darwin Ops Control",
-    email: "p.sharma@northline.com.au"
+    name: "Mahir Sadman",
+    org: "NorthLine Darwin Ops Control (S395312)",
+    email: "mahir.sadman17@gmail.com"
   },
   onLogout,
   isMobileOpen,

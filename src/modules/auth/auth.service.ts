@@ -14,10 +14,10 @@ export const DEMO_USERS: Record<string, JWTPayload> = {
   },
   admin: {
     userId: "USR-002",
-    email: "p.sharma@northline.com.au",
-    name: "Priya Sharma",
+    email: "mahir.sadman17@gmail.com",
+    name: "Mahir Sadman",
     role: "admin",
-    org: "NorthLine Darwin Depot Ops"
+    org: "NorthLine Darwin Depot Ops (S395312)"
   },
   driver: {
     userId: "USR-003",

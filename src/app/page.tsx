@@ -276,7 +276,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     className={`persona-card ${selectedRole === "admin" ? "selected" : ""}`}
-                    onClick={() => performLogin("admin", "p.sharma@northline.com.au")}
+                    onClick={() => performLogin("admin", "mahir.sadman17@gmail.com")}
                     disabled={isLoading}
                   >
                     <div className="persona-icon admin">
@@ -284,7 +284,7 @@ export default function LoginPage() {
                     </div>
                     <div className="persona-details">
                       <strong>Dispatcher / Admin Portal</strong>
-                      <span>Priya Sharma (Operations)</span>
+                      <span>Mahir Sadman (#S395312)</span>
                       <small className="text-muted">NorthLine Depot Control Center</small>
                     </div>
                     <ArrowRight size={16} className="persona-arrow" />

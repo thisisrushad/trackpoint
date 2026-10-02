@@ -32,11 +32,11 @@ async function main() {
       org: "Katherine Mining Supplies Ltd"
     },
     {
-      email: "priya.s@northline.com.au",
+      email: "mahir.sadman17@gmail.com",
       password: defaultPassword,
-      name: "Priya Sharma",
+      name: "Mahir Sadman",
       role: "admin",
-      org: "NorthLine Operations Center"
+      org: "NorthLine Operations Center (S395312)"
     },
     {
       email: "dave.m@northline.com.au",

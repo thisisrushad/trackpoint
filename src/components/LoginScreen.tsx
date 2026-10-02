@@ -22,9 +22,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       });
     } else if (selectedRole === "admin") {
       onLogin("admin", {
-        name: "Priya Sharma",
-        org: "NorthLine Darwin Ops (Admin)",
-        email: "p.sharma@northline.com.au"
+        name: "Mahir Sadman",
+        org: "NorthLine Darwin Ops (Admin #S395312)",
+        email: "mahir.sadman17@gmail.com"
       });
     } else {
       onLogin("driver", {
@@ -44,9 +44,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       });
     } else if (role === "admin") {
       onLogin("admin", {
-        name: "Priya Sharma",
-        org: "NorthLine Darwin Ops (Admin)",
-        email: "p.sharma@northline.com.au"
+        name: "Mahir Sadman",
+        org: "NorthLine Darwin Ops (Admin #S395312)",
+        email: "mahir.sadman17@gmail.com"
       });
     } else {
       onLogin("driver", {
@@ -103,8 +103,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 <ShieldCheck size={20} />
               </div>
               <div className="persona-details">
-                <strong>Priya Sharma</strong>
-                <span>Dispatcher / Admin</span>
+                <strong>Mahir Sadman</strong>
+                <span>Dispatcher / Admin (#S395312)</span>
                 <small className="text-muted">NorthLine Depot Control</small>
               </div>
               <ArrowRight size={16} className="persona-arrow" />
