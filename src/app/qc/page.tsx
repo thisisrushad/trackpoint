@@ -85,6 +85,18 @@ export default function QCDashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("modal") === "1" || params.get("inspect") === "1") {
+        const target = jobs.find(j => j.id === "TP-5461") || jobs[0];
+        if (target) {
+          openInspectModal(target);
+        }
+      }
+    }
+  }, [jobs]);
+
   const handleLogout = () => {
     localStorage.removeItem("trackpoint_token");
     localStorage.removeItem("trackpoint_user");

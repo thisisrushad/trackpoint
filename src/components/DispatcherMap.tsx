@@ -18,36 +18,14 @@ export default function DispatcherMap({
 }: DispatcherMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-
-  useEffect(() => {
-    if (!mapContainerRef.current || mapInstanceRef.current) return;
-
-    const map = L.map(mapContainerRef.current).setView([-16.5, 132.5], 6);
-    mapInstanceRef.current = map;
-
-    // Standard OpenStreetMap Tiles
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
-      maxZoom: 18
-    }).addTo(map);
-
-    return () => {
-      map.remove();
-      mapInstanceRef.current = null;
-    };
-  }, []);
-
   // Maintain markers map for smooth updates without tearing down all DOM markers
   const markersByIdRef = useRef<Map<string, { marker: L.Marker; baseLat: number; baseLng: number; inTransit: boolean }>>(new Map());
 
-  // Initialize or update vehicle markers
-  useEffect(() => {
-    if (!mapInstanceRef.current) return;
-
+  const syncVehicleMarkers = (map: L.Map, vList: Vehicle[]) => {
+    if (!map) return;
     const currentMap = markersByIdRef.current;
-    const activeIds = new Set(vehicles.map((v) => v.id));
+    const activeIds = new Set(vList.map((v) => v.id));
 
-    // Remove obsolete markers
     currentMap.forEach((entry, id) => {
       if (!activeIds.has(id)) {
         entry.marker.remove();
@@ -55,7 +33,7 @@ export default function DispatcherMap({
       }
     });
 
-    vehicles.forEach((v) => {
+    vList.forEach((v) => {
       const isInTransit = v.status.includes("Transit");
       if (currentMap.has(v.id)) {
         const entry = currentMap.get(v.id)!;
@@ -73,11 +51,39 @@ export default function DispatcherMap({
           iconAnchor: [55, 12]
         });
 
-        const marker = L.marker([v.lat, v.lng], { icon: vIcon }).addTo(mapInstanceRef.current!);
+        const marker = L.marker([v.lat, v.lng], { icon: vIcon }).addTo(map);
         marker.bindPopup(`<b>${v.name}</b><br>Driver: ${v.driver}<br>Type: ${v.type}<br>Depot: ${v.depot}<br>Status: ${v.status}<br>Speed: ${v.speed}<br>Fuel: ${v.fuelLevel}`);
         currentMap.set(v.id, { marker, baseLat: v.lat, baseLng: v.lng, inTransit: isInTransit });
       }
     });
+  };
+
+  useEffect(() => {
+    if (!mapContainerRef.current || mapInstanceRef.current) return;
+
+    const map = L.map(mapContainerRef.current).setView([-16.5, 132.5], 6);
+    mapInstanceRef.current = map;
+
+    // Standard OpenStreetMap Tiles
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 18
+    }).addTo(map);
+
+    syncVehicleMarkers(map, vehicles);
+
+    return () => {
+      markersByIdRef.current.clear();
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  // Update vehicle markers when vehicles change
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      syncVehicleMarkers(mapInstanceRef.current, vehicles);
+    }
   }, [vehicles]);
 
   // Live telematics coordinate simulation for in-transit vehicles
