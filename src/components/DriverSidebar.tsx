@@ -167,12 +167,12 @@ export default function DriverSidebar({
                 key={item.href}
                 href={item.href}
                 onClick={onCloseMobile}
-                className={`flex items-center gap-3 w-full rounded-xl transition no-underline relative ${
+                className={`flex items-center gap-3 w-full rounded-xl transition no-underline relative cursor-pointer select-none ${
                   isCollapsed ? "py-3 justify-center" : "px-3.5 py-2.5 justify-between"
                 } ${
                   isActive
-                    ? "bg-gradient-to-r from-emerald-600/30 to-teal-500/15 border border-emerald-400/40 text-white shadow-sm"
-                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent"
+                    ? "bg-gradient-to-r from-emerald-600/30 to-teal-500/15 border border-emerald-400/40 text-white shadow-sm pointer-events-auto"
+                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent pointer-events-auto"
                 }`}
                 title={item.label}
               >
@@ -181,7 +181,7 @@ export default function DriverSidebar({
                   <div className="absolute left-0 top-1/4 bottom-1/4 w-1 rounded-r bg-emerald-400 shadow-md shadow-emerald-400" />
                 )}
 
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 pointer-events-none">
                   <div className={`${isActive ? "text-emerald-400" : "text-slate-400"} shrink-0`}>
                     {item.icon}
                   </div>
@@ -195,7 +195,7 @@ export default function DriverSidebar({
                 {!isCollapsed && item.badge && (
                   <span
                     style={{ color: item.badgeColor || "#cbd5e1" }}
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 pointer-events-none ${
                       isActive ? "bg-emerald-500/20 border-emerald-400/30" : "bg-white/5 border-white/10"
                     }`}
                   >
@@ -217,28 +217,30 @@ export default function DriverSidebar({
 
           <Link
             href="/customer"
-            className={`flex items-center gap-3 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition no-underline text-xs ${
+            onClick={onCloseMobile}
+            className={`flex items-center gap-3 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition no-underline text-xs cursor-pointer select-none pointer-events-auto ${
               isCollapsed ? "py-2.5 justify-center" : "px-3 py-2 justify-start"
             }`}
             title="Open Customer Consignment Portal"
           >
-            <div className="text-sky-400 shrink-0">
+            <div className="text-sky-400 shrink-0 pointer-events-none">
               <ExternalLink size={15} />
             </div>
-            {!isCollapsed && <span>Customer Portal (/customer)</span>}
+            {!isCollapsed && <span className="pointer-events-none">Customer Portal (/customer)</span>}
           </Link>
 
           <Link
             href="/admin"
-            className={`flex items-center gap-3 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition no-underline text-xs ${
+            onClick={onCloseMobile}
+            className={`flex items-center gap-3 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition no-underline text-xs cursor-pointer select-none pointer-events-auto ${
               isCollapsed ? "py-2.5 justify-center" : "px-3 py-2 justify-start"
             }`}
             title="Open Admin Operations Console"
           >
-            <div className="text-blue-400 shrink-0">
+            <div className="text-blue-400 shrink-0 pointer-events-none">
               <ShieldCheck size={15} />
             </div>
-            {!isCollapsed && <span>Admin Portal (/admin)</span>}
+            {!isCollapsed && <span className="pointer-events-none">Admin Portal (/admin)</span>}
           </Link>
         </div>
 
