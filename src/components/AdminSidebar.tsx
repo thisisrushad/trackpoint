@@ -44,7 +44,7 @@ interface AdminSidebarProps {
 export default function AdminSidebar({
   isCollapsed,
   onToggleCollapse,
-  consignmentsCount = 10,
+  consignmentsCount: initialConsignmentsCount,
   fleetCount = 35,
   dbStatus = "connected",
   onRefreshDB,
@@ -59,13 +59,37 @@ export default function AdminSidebar({
   onCloseMobile
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [liveConsignmentsCount, setLiveConsignmentsCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await fetch("/api/jobs");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.jobs)) {
+          setLiveConsignmentsCount(data.jobs.length);
+        }
+      } catch (e) {}
+    };
+
+    fetchCount();
+    const interval = setInterval(fetchCount, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const effectiveConsignmentsCount =
+    liveConsignmentsCount !== null
+      ? liveConsignmentsCount
+      : initialConsignmentsCount !== undefined
+      ? initialConsignmentsCount
+      : 10;
 
   const navItems = [
     {
       href: "/admin/consignments",
       label: "Consignments & Queue",
       icon: <Package size={19} />,
-      badge: `${consignmentsCount}`,
+      badge: `${effectiveConsignmentsCount}`,
       badgeColor: "#38bdf8"
     },
     {

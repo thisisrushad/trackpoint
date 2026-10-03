@@ -36,8 +36,8 @@ interface CustomerSidebarProps {
 export default function CustomerSidebar({
   isCollapsed,
   onToggleCollapse,
-  consignmentsCount = 10,
-  invoicesCount = 4,
+  consignmentsCount: initialConsignmentsCount,
+  invoicesCount: initialInvoicesCount,
   userProfile = {
     name: "Sandra Wilson",
     org: "Katherine Mining Supplies Ltd",
@@ -48,6 +48,46 @@ export default function CustomerSidebar({
   onCloseMobile
 }: CustomerSidebarProps) {
   const pathname = usePathname();
+  const [liveConsignmentsCount, setLiveConsignmentsCount] = React.useState<number | null>(null);
+  const [liveInvoicesCount, setLiveInvoicesCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const res = await fetch("/api/jobs");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.jobs)) {
+          setLiveConsignmentsCount(data.jobs.length);
+        }
+      } catch (e) {}
+
+      try {
+        const resInv = await fetch("/api/invoices");
+        const dataInv = await resInv.json();
+        if (dataInv.success && Array.isArray(dataInv.invoices)) {
+          setLiveInvoicesCount(dataInv.invoices.length);
+        }
+      } catch (e) {}
+    };
+
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const effectiveConsignmentsCount =
+    liveConsignmentsCount !== null
+      ? liveConsignmentsCount
+      : initialConsignmentsCount !== undefined
+      ? initialConsignmentsCount
+      : 0;
+
+  const effectiveInvoicesCount =
+    liveInvoicesCount !== null
+      ? liveInvoicesCount
+      : initialInvoicesCount !== undefined
+      ? initialInvoicesCount
+      : 4;
 
   const navItems = [
     {
@@ -61,14 +101,14 @@ export default function CustomerSidebar({
       href: "/customer/orders",
       label: "Consignments & Booking",
       icon: <PackageCheck size={19} />,
-      badge: `${consignmentsCount}`,
+      badge: `${effectiveConsignmentsCount}`,
       badgeColor: "#38bdf8"
     },
     {
       href: "/customer/invoices",
       label: "Tax Invoices & e-PODs",
       icon: <FileText size={19} />,
-      badge: "ATO",
+      badge: `${effectiveInvoicesCount}`,
       badgeColor: "#fbbf24"
     }
   ];
