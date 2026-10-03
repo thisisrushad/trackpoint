@@ -73,12 +73,15 @@ export default function DriverNavigationPage() {
           dropoffAddress={activeJob.dropoff}
           status={activeJob.status}
           onPositionUpdate={(coords) => {
-            setActiveJob((prev) => ({ ...prev, lat: coords[0], lng: coords[1] }));
+            setActiveJob((prev) => {
+              if (prev.lat === coords[0] && prev.lng === coords[1]) return prev;
+              return { ...prev, lat: coords[0], lng: coords[1] };
+            });
           }}
           onProgressChange={(progress, hasArrived) => {
-            setMapProgress(progress);
+            setMapProgress((prev) => (prev === progress ? prev : progress));
             if (hasArrived) {
-              setHasMapArrived(true);
+              setHasMapArrived((prev) => (prev ? prev : true));
             }
           }}
           onArrival={async () => {

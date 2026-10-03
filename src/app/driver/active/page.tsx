@@ -547,13 +547,16 @@ function DriverActiveRunContent() {
               status={job.status}
               height="260px"
               onPositionUpdate={(coords) => {
-                // Keep local job lat/lng synchronized
-                setJob((prev) => ({ ...prev, lat: coords[0], lng: coords[1] }));
+                // Keep local job lat/lng synchronized only if actually changed
+                setJob((prev) => {
+                  if (prev.lat === coords[0] && prev.lng === coords[1]) return prev;
+                  return { ...prev, lat: coords[0], lng: coords[1] };
+                });
               }}
               onProgressChange={(progress, hasArrived) => {
-                setMapProgress(progress);
+                setMapProgress((prev) => (prev === progress ? prev : progress));
                 if (hasArrived) {
-                  setHasMapArrived(true);
+                  setHasMapArrived((prev) => (prev ? prev : true));
                 }
               }}
               onArrival={async () => {

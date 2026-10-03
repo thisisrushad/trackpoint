@@ -168,16 +168,27 @@ export default function MapView({
     ? "Delivered"
     : status;
 
+  // Keep callback refs stable to avoid triggering useEffect on every parent render
+  const onPositionUpdateRef = useRef(onPositionUpdate);
+  useEffect(() => {
+    onPositionUpdateRef.current = onPositionUpdate;
+  }, [onPositionUpdate]);
+
+  const onProgressChangeRef = useRef(onProgressChange);
+  useEffect(() => {
+    onProgressChangeRef.current = onProgressChange;
+  }, [onProgressChange]);
+
   const isActuallyDocked = isDelivered || hasReachedDestination || isArrivedStatus;
 
-  // Active coordinates
+  // Active coordinates - strictly indexed from corridorPoints during simulation
   const currentCoords = useMemo<[number, number]>(() => {
     if (isActuallyDocked) return dropoffCoords;
     if (isAssigned) return pickupCoords;
     if (corridorPoints.length === 0) return [truckLat || -12.9540, truckLng || 131.7820];
     const safeIdx = Math.min(Math.max(0, stepIndex), corridorPoints.length - 1);
     return corridorPoints[safeIdx];
-  }, [isActuallyDocked, isAssigned, corridorPoints, stepIndex, dropoffCoords, pickupCoords, truckLat, truckLng]);
+  }, [isActuallyDocked, isAssigned, corridorPoints, stepIndex, dropoffCoords, pickupCoords]);
 
   // Calculate percentage of journey completed
   const progressPercent = useMemo(() => {
@@ -187,7 +198,7 @@ export default function MapView({
     return Math.round((stepIndex / (corridorPoints.length - 1)) * 100);
   }, [stepIndex, corridorPoints.length, isActuallyDocked, isAssigned]);
 
-  // Persist current location & step index to localStorage and notify callbacks
+  // Persist current location & step index to localStorage and notify callbacks ONLY when stepIndex or isActuallyDocked changes
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storageKey = jobId ? `trackpoint_step_${jobId}` : `trackpoint_step_${vehicleName}`;
@@ -197,17 +208,18 @@ export default function MapView({
         localStorage.setItem(`trackpoint_arrived_${jobId}`, isActuallyDocked ? "true" : "false");
       }
     }
-    if (onPositionUpdate) {
-      onPositionUpdate(currentCoords, stepIndex);
+    if (onPositionUpdateRef.current) {
+      onPositionUpdateRef.current(currentCoords, stepIndex);
     }
-  }, [stepIndex, currentCoords, jobId, vehicleName, isActuallyDocked, onPositionUpdate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIndex, isActuallyDocked, jobId, vehicleName]);
 
-  // Notify parent of progress or arrival changes
+  // Notify parent of progress or arrival changes only when progressPercent or isActuallyDocked changes
   useEffect(() => {
-    if (onProgressChange) {
-      onProgressChange(progressPercent, isActuallyDocked);
+    if (onProgressChangeRef.current) {
+      onProgressChangeRef.current(progressPercent, isActuallyDocked);
     }
-  }, [progressPercent, isActuallyDocked, onProgressChange]);
+  }, [progressPercent, isActuallyDocked]);
 
   // Initialize Map
   useEffect(() => {
