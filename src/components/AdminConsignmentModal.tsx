@@ -786,6 +786,7 @@ export default function AdminConsignmentModal({
               {/* Map Canvas Container */}
               <div style={{ borderRadius: "10px", overflow: "hidden", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
                 <MapView
+                  jobId={job.id}
                   height="360px"
                   truckLat={job.lat}
                   truckLng={job.lng}

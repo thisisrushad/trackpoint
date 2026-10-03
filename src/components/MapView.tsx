@@ -207,12 +207,60 @@ export default function MapView({
         localStorage.setItem(`trackpoint_coords_${jobId}`, JSON.stringify(currentCoords));
         localStorage.setItem(`trackpoint_arrived_${jobId}`, isActuallyDocked ? "true" : "false");
       }
+      // Broadcast live sync event across same-window and cross-portal views
+      window.dispatchEvent(
+        new CustomEvent("trackpoint_sync_step", {
+          detail: { jobId, vehicleName, stepIndex, isActuallyDocked, coords: currentCoords }
+        })
+      );
     }
     if (onPositionUpdateRef.current) {
       onPositionUpdateRef.current(currentCoords, stepIndex);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex, isActuallyDocked, jobId, vehicleName]);
+
+  // Synchronize stepIndex from other open tabs, portals, or views in real-time
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleSync = (targetJobId: string | undefined, targetVehicle: string, newStep: number, arrived?: boolean) => {
+      const matches = (jobId && targetJobId && jobId.toLowerCase() === targetJobId.toLowerCase()) ||
+                      (!jobId && targetVehicle === vehicleName);
+      if (matches && !isNaN(newStep) && newStep >= 0 && newStep < corridorPoints.length) {
+        setStepIndex((prev) => (prev === newStep ? prev : newStep));
+        if (arrived !== undefined) {
+          setHasReachedDestination((prev) => (prev === arrived ? prev : arrived));
+        }
+      }
+    };
+
+    const onCustomSync = (e: Event) => {
+      const custom = e as CustomEvent;
+      if (custom.detail) {
+        handleSync(custom.detail.jobId, custom.detail.vehicleName, custom.detail.stepIndex, custom.detail.isActuallyDocked);
+      }
+    };
+
+    const onStorageChange = (e: StorageEvent) => {
+      const storageKey = jobId ? `trackpoint_step_${jobId}` : `trackpoint_step_${vehicleName}`;
+      if (e.key === storageKey && e.newValue !== null) {
+        const parsed = parseInt(e.newValue, 10);
+        handleSync(jobId, vehicleName, parsed);
+      }
+      if (jobId && e.key === `trackpoint_arrived_${jobId}`) {
+        setHasReachedDestination(e.newValue === "true");
+      }
+    };
+
+    window.addEventListener("trackpoint_sync_step", onCustomSync);
+    window.addEventListener("storage", onStorageChange);
+
+    return () => {
+      window.removeEventListener("trackpoint_sync_step", onCustomSync);
+      window.removeEventListener("storage", onStorageChange);
+    };
+  }, [jobId, vehicleName, corridorPoints.length]);
 
   // Notify parent of progress or arrival changes only when progressPercent or isActuallyDocked changes
   useEffect(() => {

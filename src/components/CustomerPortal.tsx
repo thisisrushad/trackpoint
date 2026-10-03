@@ -137,6 +137,7 @@ export default function CustomerPortal({
 
           <MapView
             key={`${activeJob.id}-${activeJob.status}`}
+            jobId={activeJob.id}
             truckLat={activeJob.lat}
             truckLng={activeJob.lng}
             driverName={activeJob.driver}

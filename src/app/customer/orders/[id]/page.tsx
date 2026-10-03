@@ -83,30 +83,7 @@ export default function ConsignmentDetailsPage() {
     return () => clearInterval(interval);
   }, [jobId]);
 
-  // Live Stuart Hwy GPS animation for In-Transit consignments only
-  useEffect(() => {
-    if (!job || job.status !== "In Transit") return;
-    let progress = 0.35;
-    const gpsInterval = setInterval(() => {
-      progress += 0.015;
-      if (progress > 0.95) progress = 0.1;
-
-      const totalSegments = STUART_HIGHWAY_WAYPOINTS.length - 1;
-      const globalProgress = progress * totalSegments;
-      const currentSeg = Math.floor(globalProgress);
-      const segFraction = globalProgress - currentSeg;
-
-      const p1 = STUART_HIGHWAY_WAYPOINTS[currentSeg];
-      const p2 = STUART_HIGHWAY_WAYPOINTS[currentSeg + 1] || p1;
-
-      const currentLat = p1[0] + (p2[0] - p1[0]) * segFraction;
-      const currentLng = p1[1] + (p2[1] - p1[1]) * segFraction;
-
-      setJob((prev) => (prev ? { ...prev, lat: currentLat, lng: currentLng } : prev));
-    }, 3000);
-
-    return () => clearInterval(gpsInterval);
-  }, [job?.id, job?.status]);
+  // Sync job telemetry via periodic fetch in main effect above
 
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -418,6 +395,7 @@ export default function ConsignmentDetailsPage() {
               </div>
 
               <MapView
+                jobId={job.id}
                 truckLat={job.lat}
                 truckLng={job.lng}
                 driverName={job.driver}
