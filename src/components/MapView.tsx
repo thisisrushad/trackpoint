@@ -16,6 +16,7 @@ interface MapViewProps {
   status?: string;
   height?: string;
   onArrival?: () => void;
+  onProgressChange?: (progress: number, hasArrived: boolean) => void;
 }
 
 // Master Stuart Highway Corridor sequence from North (Darwin) to South (Alice Springs)
@@ -90,7 +91,8 @@ export default function MapView({
   dropoffAddress = "Katherine Store (Katherine Terrace)",
   status = "In Transit",
   height = "500px",
-  onArrival
+  onArrival,
+  onProgressChange
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -148,6 +150,13 @@ export default function MapView({
     if (corridorPoints.length <= 1) return 0;
     return Math.round((stepIndex / (corridorPoints.length - 1)) * 100);
   }, [stepIndex, corridorPoints.length, isActuallyDocked, isAssigned]);
+
+  // Notify parent of progress or arrival changes
+  useEffect(() => {
+    if (onProgressChange) {
+      onProgressChange(progressPercent, isActuallyDocked);
+    }
+  }, [progressPercent, isActuallyDocked, onProgressChange]);
 
   // Initialize Map
   useEffect(() => {
@@ -427,6 +436,25 @@ export default function MapView({
     }
   };
 
+  // Jump truck directly to destination receiving dock
+  const handleJumpToDestination = () => {
+    if (corridorPoints.length === 0) return;
+    const finalIdx = corridorPoints.length - 1;
+    setStepIndex(finalIdx);
+    setHasReachedDestination(true);
+    setCurrentSpeed(0);
+    setIsPlaying(false);
+    if (truckMarkerRef.current) {
+      truckMarkerRef.current.setLatLng(corridorPoints[finalIdx]);
+    }
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView(corridorPoints[finalIdx], 12, { animate: true });
+    }
+    if (onArrival) {
+      onArrival();
+    }
+  };
+
   return (
     <div style={{ position: "relative", width: "100%", height: height, minHeight: height, borderRadius: "14px", overflow: "hidden" }}>
       {/* Leaflet Canvas Container */}
@@ -613,6 +641,31 @@ export default function MapView({
             <RotateCcw size={12} />
             <span>Reset</span>
           </button>
+
+          {/* Jump to Destination Dock */}
+          {!hasReachedDestination && (
+            <button
+              type="button"
+              onClick={handleJumpToDestination}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                background: "rgba(16, 185, 129, 0.2)",
+                border: "1px solid rgba(16, 185, 129, 0.4)",
+                color: "#6ee7b7",
+                borderRadius: "8px",
+                padding: "0.35rem 0.55rem",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer"
+              }}
+              title="Fast-forward truck to destination receiving dock (simulates physical arrival)"
+            >
+              <MapPin size={12} />
+              <span>Reach Dock</span>
+            </button>
+          )}
 
           {/* Progress Indicator */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "2px" }}>

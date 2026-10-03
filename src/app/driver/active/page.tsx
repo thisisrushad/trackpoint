@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Job, jobsDB } from "@/lib/data";
 import { useToast } from "@/context/ToastContext";
 import {
@@ -17,8 +18,12 @@ import {
   ArrowRight,
   Clock,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  AlertCircle
 } from "lucide-react";
+
+// Dynamically import MapView to avoid SSR issues
+const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -34,6 +39,8 @@ function DriverActiveRunContent() {
   const [photoAttached, setPhotoAttached] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [hasMapArrived, setHasMapArrived] = useState(false);
+  const [mapProgress, setMapProgress] = useState(30);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
@@ -79,7 +86,13 @@ function DriverActiveRunContent() {
           if (!selected) {
             selected = data.jobs[0];
           }
-          if (selected) setJob(selected);
+          if (selected) {
+            setJob(selected);
+            if (selected.status === "Arrived" || selected.status === "QC Passed" || selected.status === "Delivered" || selected.status === "Invoiced") {
+              setHasMapArrived(true);
+              setMapProgress(100);
+            }
+          }
         }
       })
       .catch(console.error);
@@ -313,43 +326,82 @@ function DriverActiveRunContent() {
             )}
 
             {isInTransit && (
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  type="button"
-                  disabled={isUpdating}
-                  onClick={async () => {
-                    setIsUpdating(true);
-                    try {
-                      const res = await fetch(`/api/jobs/${job.id}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ status: "Arrived" })
-                      });
-                      const data = await res.json();
-                      if (data.success && data.job) {
-                        setJob(data.job);
-                        toast.success(`Vehicle docked at destination receiving bay. Ready for Receiving Dock QC & e-POD sign-off.`, "Arrived at Destination");
-                      }
-                    } catch (err: any) {
-                      toast.error("Failed to update status to Arrived", "Error");
-                    } finally {
-                      setIsUpdating(false);
-                    }
-                  }}
-                  className="flex-1 py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 cursor-pointer transition"
-                >
-                  <MapPin size={15} />
-                  <span>Mark Dock Arrival (Set Status: Arrived)</span>
-                </button>
+              <div className="space-y-3">
+                {/* Lockout Notice when truck has not reached destination yet */}
+                {!hasMapArrived && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-200">
+                    <Lock size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                    <div className="leading-relaxed">
+                      <strong className="text-amber-300 font-bold block mb-0.5">
+                        Dock Arrival Locked — Heavy Vehicle En Route ({mapProgress}% along Stuart Hwy)
+                      </strong>
+                      The vehicle has not arrived at the destination yet. Mark Dock Arrival unlocks automatically once the truck reaches the destination receiving dock coordinates on the corridor map.
+                    </div>
+                  </div>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => toast.info("Dock arrival notification transmitted to customer receiving department.", "Arrival Pushed")}
-                  className="py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition"
-                >
-                  <Phone size={14} className="text-emerald-400" />
-                  <span>Alert Dock</span>
-                </button>
+                {hasMapArrived && (
+                  <div className="bg-emerald-500/15 border border-emerald-500/40 rounded-xl p-3 flex items-start gap-2.5 text-xs text-emerald-200 animate-pulse">
+                    <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="leading-relaxed font-semibold">
+                      <strong className="text-emerald-300 font-bold block mb-0.5">
+                        GPS Geo-Fence Reached Destination!
+                      </strong>
+                      Heavy vehicle detected at receiving bay coordinates. You can now confirm Dock Arrival.
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    disabled={isUpdating || !hasMapArrived}
+                    onClick={async () => {
+                      if (!hasMapArrived) {
+                        toast.warning(
+                          "Vehicle has not reached destination receiving dock coordinates yet. Please wait until arrival on the map.",
+                          "Dock Arrival Locked"
+                        );
+                        return;
+                      }
+                      setIsUpdating(true);
+                      try {
+                        const res = await fetch(`/api/jobs/${job.id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ status: "Arrived" })
+                        });
+                        const data = await res.json();
+                        if (data.success && data.job) {
+                          setJob(data.job);
+                          toast.success(`Vehicle docked at destination receiving bay. Ready for Receiving Dock QC & e-POD sign-off.`, "Arrived at Destination");
+                        }
+                      } catch (err: any) {
+                        toast.error("Failed to update status to Arrived", "Error");
+                      } finally {
+                        setIsUpdating(false);
+                      }
+                    }}
+                    className={`flex-1 py-3 px-4 rounded-xl font-extrabold text-xs shadow-lg flex items-center justify-center gap-2 transition ${
+                      hasMapArrived
+                        ? "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/30 cursor-pointer"
+                        : "bg-purple-950/40 text-purple-300/40 border border-purple-500/20 cursor-not-allowed opacity-60"
+                    }`}
+                    title={!hasMapArrived ? "Disabled until truck reaches destination receiving dock on the map" : "Mark Dock Arrival"}
+                  >
+                    {!hasMapArrived ? <Lock size={15} /> : <MapPin size={15} />}
+                    <span>Mark Dock Arrival {!hasMapArrived ? "(Locked: En Route)" : "(Set Status: Arrived)"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => toast.info("Dock arrival notification transmitted to customer receiving department.", "Arrival Pushed")}
+                    className="py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition"
+                  >
+                    <Phone size={14} className="text-emerald-400" />
+                    <span>Alert Dock</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -469,6 +521,44 @@ function DriverActiveRunContent() {
             </div>
           </div>
 
+          {/* Live Stuart Highway GPS Corridor Mini-Map */}
+          <div className="rounded-xl overflow-hidden border border-white/10 shadow-lg bg-slate-950">
+            <div className="bg-slate-950/90 px-3.5 py-2 border-b border-white/10 flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                <Navigation size={13} className="text-emerald-400" />
+                <span>Live Route Corridor GPS Tracking</span>
+              </span>
+              <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${
+                hasMapArrived || isArrived || isDelivered
+                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                  : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+              }`}>
+                {hasMapArrived || isArrived || isDelivered ? "🏁 Destination Dock Reached" : `🚚 ${mapProgress}% Complete En Route`}
+              </span>
+            </div>
+            <MapView
+              truckLat={job.lat}
+              truckLng={job.lng}
+              driverName={job.driver}
+              vehicleName={job.vehicle}
+              pickupAddress={job.pickup}
+              dropoffAddress={job.dropoff}
+              status={job.status}
+              height="260px"
+              onProgressChange={(progress, hasArrived) => {
+                setMapProgress(progress);
+                if (hasArrived) {
+                  setHasMapArrived(true);
+                }
+              }}
+              onArrival={() => {
+                setHasMapArrived(true);
+                setMapProgress(100);
+                toast.success("Truck reached destination receiving dock coordinates on map! Dock arrival is now unlocked.", "Destination Reached");
+              }}
+            />
+          </div>
+
           <div className="flex gap-3">
             <a
               href="tel:+61889721144"
@@ -482,7 +572,7 @@ function DriverActiveRunContent() {
               className="flex-1 py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-bold no-underline flex items-center justify-center gap-1.5 transition"
             >
               <Navigation size={13} className="text-emerald-400" />
-              <span>View Highway Map</span>
+              <span>Full Highway Map</span>
             </Link>
           </div>
         </div>
