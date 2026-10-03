@@ -1083,6 +1083,7 @@ export default function DriverConsole({
           {/* Main Map Frame */}
           <div className="glass-card" style={{ padding: 0, overflow: "hidden", minHeight: "520px" }}>
             <MapView
+              jobId={activeJob.id}
               truckLat={activeJob.lat}
               truckLng={activeJob.lng}
               driverName={activeJob.driver}

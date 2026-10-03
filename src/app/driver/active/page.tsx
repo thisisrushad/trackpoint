@@ -537,6 +537,7 @@ function DriverActiveRunContent() {
               </span>
             </div>
             <MapView
+              jobId={job.id}
               truckLat={job.lat}
               truckLng={job.lng}
               driverName={job.driver}
@@ -545,16 +546,28 @@ function DriverActiveRunContent() {
               dropoffAddress={job.dropoff}
               status={job.status}
               height="260px"
+              onPositionUpdate={(coords) => {
+                // Keep local job lat/lng synchronized
+                setJob((prev) => ({ ...prev, lat: coords[0], lng: coords[1] }));
+              }}
               onProgressChange={(progress, hasArrived) => {
                 setMapProgress(progress);
                 if (hasArrived) {
                   setHasMapArrived(true);
                 }
               }}
-              onArrival={() => {
+              onArrival={async () => {
                 setHasMapArrived(true);
                 setMapProgress(100);
                 toast.success("Truck reached destination receiving dock coordinates on map! Dock arrival is now unlocked.", "Destination Reached");
+                // Persist reached destination coordinates to database
+                try {
+                  await fetch(`/api/jobs/${job.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ lat: job.lat, lng: job.lng })
+                  });
+                } catch (e) {}
               }}
             />
           </div>

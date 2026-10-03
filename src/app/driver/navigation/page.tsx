@@ -64,6 +64,7 @@ export default function DriverNavigationPage() {
       {/* Left 8 Cols: Full Stuart Highway Map */}
       <div className="lg:col-span-8 bg-slate-900/90 border border-white/10 rounded-2xl overflow-hidden shadow-2xl min-h-[540px]">
         <MapView
+          jobId={activeJob.id}
           truckLat={activeJob.lat}
           truckLng={activeJob.lng}
           driverName={activeJob.driver}
@@ -71,16 +72,26 @@ export default function DriverNavigationPage() {
           pickupAddress={activeJob.pickup}
           dropoffAddress={activeJob.dropoff}
           status={activeJob.status}
+          onPositionUpdate={(coords) => {
+            setActiveJob((prev) => ({ ...prev, lat: coords[0], lng: coords[1] }));
+          }}
           onProgressChange={(progress, hasArrived) => {
             setMapProgress(progress);
             if (hasArrived) {
               setHasMapArrived(true);
             }
           }}
-          onArrival={() => {
+          onArrival={async () => {
             setHasMapArrived(true);
             setMapProgress(100);
             toast.success("Truck reached destination receiving dock coordinates! Ready to mark dock arrival.", "Destination Reached");
+            try {
+              await fetch(`/api/jobs/${activeJob.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ lat: activeJob.lat, lng: activeJob.lng })
+              });
+            } catch (e) {}
           }}
         />
       </div>

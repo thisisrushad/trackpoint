@@ -7,6 +7,7 @@ import { STUART_HIGHWAY_WAYPOINTS, NT_COORDINATES, getDestinationCoords } from "
 import { Play, Pause, RotateCcw, FastForward, Crosshair, Navigation, Gauge, MapPin } from "lucide-react";
 
 interface MapViewProps {
+  jobId?: string;
   truckLat?: number;
   truckLng?: number;
   driverName?: string;
@@ -17,6 +18,7 @@ interface MapViewProps {
   height?: string;
   onArrival?: () => void;
   onProgressChange?: (progress: number, hasArrived: boolean) => void;
+  onPositionUpdate?: (coords: [number, number], stepIdx: number) => void;
 }
 
 // Master Stuart Highway Corridor sequence from North (Darwin) to South (Alice Springs)
@@ -83,6 +85,7 @@ function generateCorridorPoints(
 }
 
 export default function MapView({
+  jobId,
   truckLat,
   truckLng,
   driverName = "Dave Miller",
@@ -92,7 +95,8 @@ export default function MapView({
   status = "In Transit",
   height = "500px",
   onArrival,
-  onProgressChange
+  onProgressChange,
+  onPositionUpdate
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -102,6 +106,7 @@ export default function MapView({
   const isDelivered = status === "Delivered" || status === "Invoiced";
   const isInTransit = status === "In Transit";
   const isAssigned = status === "Assigned" || status === "Booked";
+  const isArrivedStatus = status === "Arrived";
 
   const pickupCoords = useMemo(() => getDestinationCoords(pickupAddress), [pickupAddress]);
   const dropoffCoords = useMemo(() => getDestinationCoords(dropoffAddress), [dropoffAddress]);
@@ -114,25 +119,56 @@ export default function MapView({
   // Live movement simulation state
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1);
-  const [hasReachedDestination, setHasReachedDestination] = useState<boolean>(isDelivered);
+  const [hasReachedDestination, setHasReachedDestination] = useState<boolean>(isDelivered || isArrivedStatus);
   const [stepIndex, setStepIndex] = useState<number>(() => {
-    if (isDelivered) return corridorPoints.length - 1;
-    // For live demonstration: start at ~30% through the trip
+    if (isDelivered || isArrivedStatus) return corridorPoints.length - 1;
+
+    // 1. Check persistent localStorage saved stepIndex for this job / vehicle
+    if (typeof window !== "undefined") {
+      const storageKey = jobId ? `trackpoint_step_${jobId}` : `trackpoint_step_${vehicleName}`;
+      const savedStep = localStorage.getItem(storageKey);
+      if (savedStep !== null) {
+        const parsed = parseInt(savedStep, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed < corridorPoints.length) {
+          return parsed;
+        }
+      }
+    }
+
+    // 2. If truckLat & truckLng provided and not origin, find closest index in corridorPoints
+    if (truckLat !== undefined && truckLng !== undefined && corridorPoints.length > 0) {
+      let closestIdx = -1;
+      let minDistance = Infinity;
+      for (let i = 0; i < corridorPoints.length; i++) {
+        const [pLat, pLng] = corridorPoints[i];
+        const dist = Math.hypot(pLat - truckLat, pLng - truckLng);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestIdx = i;
+        }
+      }
+      // If within 0.1 degrees (~11km) of corridor, snap to closest waypoint
+      if (closestIdx !== -1 && minDistance < 0.15) {
+        return closestIdx;
+      }
+    }
+
+    // 3. Fallback default for in-transit
     if (isInTransit) return Math.min(corridorPoints.length - 1, Math.floor(corridorPoints.length * 0.3));
     return 0;
   });
 
-  const [currentSpeed, setCurrentSpeed] = useState<number>(() => (isDelivered ? 0 : 86));
+  const [currentSpeed, setCurrentSpeed] = useState<number>(() => (isDelivered || isArrivedStatus ? 0 : 86));
   const [autoCenter, setAutoCenter] = useState<boolean>(false);
 
   // Effective status accounting for local live arrival
-  const effectiveStatus = hasReachedDestination
+  const effectiveStatus = hasReachedDestination || isArrivedStatus
     ? "Arrived & Docked"
     : isDelivered
     ? "Delivered"
     : status;
 
-  const isActuallyDocked = isDelivered || hasReachedDestination;
+  const isActuallyDocked = isDelivered || hasReachedDestination || isArrivedStatus;
 
   // Active coordinates
   const currentCoords = useMemo<[number, number]>(() => {
@@ -150,6 +186,21 @@ export default function MapView({
     if (corridorPoints.length <= 1) return 0;
     return Math.round((stepIndex / (corridorPoints.length - 1)) * 100);
   }, [stepIndex, corridorPoints.length, isActuallyDocked, isAssigned]);
+
+  // Persist current location & step index to localStorage and notify callbacks
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storageKey = jobId ? `trackpoint_step_${jobId}` : `trackpoint_step_${vehicleName}`;
+      localStorage.setItem(storageKey, stepIndex.toString());
+      if (jobId) {
+        localStorage.setItem(`trackpoint_coords_${jobId}`, JSON.stringify(currentCoords));
+        localStorage.setItem(`trackpoint_arrived_${jobId}`, isActuallyDocked ? "true" : "false");
+      }
+    }
+    if (onPositionUpdate) {
+      onPositionUpdate(currentCoords, stepIndex);
+    }
+  }, [stepIndex, currentCoords, jobId, vehicleName, isActuallyDocked, onPositionUpdate]);
 
   // Notify parent of progress or arrival changes
   useEffect(() => {
@@ -426,6 +477,16 @@ export default function MapView({
     setHasReachedDestination(false);
     setCurrentSpeed(86);
     setIsPlaying(true);
+    if (typeof window !== "undefined") {
+      const storageKey = jobId ? `trackpoint_step_${jobId}` : `trackpoint_step_${vehicleName}`;
+      localStorage.setItem(storageKey, "0");
+      if (jobId) {
+        localStorage.setItem(`trackpoint_arrived_${jobId}`, "false");
+        if (corridorPoints.length > 0) {
+          localStorage.setItem(`trackpoint_coords_${jobId}`, JSON.stringify(corridorPoints[0]));
+        }
+      }
+    }
     if (truckMarkerRef.current && corridorPoints.length > 0) {
       truckMarkerRef.current.setLatLng(corridorPoints[0]);
     }
@@ -444,6 +505,14 @@ export default function MapView({
     setHasReachedDestination(true);
     setCurrentSpeed(0);
     setIsPlaying(false);
+    if (typeof window !== "undefined") {
+      const storageKey = jobId ? `trackpoint_step_${jobId}` : `trackpoint_step_${vehicleName}`;
+      localStorage.setItem(storageKey, finalIdx.toString());
+      if (jobId) {
+        localStorage.setItem(`trackpoint_arrived_${jobId}`, "true");
+        localStorage.setItem(`trackpoint_coords_${jobId}`, JSON.stringify(corridorPoints[finalIdx]));
+      }
+    }
     if (truckMarkerRef.current) {
       truckMarkerRef.current.setLatLng(corridorPoints[finalIdx]);
     }
