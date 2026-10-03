@@ -260,7 +260,14 @@ export default function AdminConsignmentModal({
   return (
     <div
       className="modal-backdrop"
-      style={{ zIndex: 10000, overflowY: "auto", padding: "1.5rem 0" }}
+      style={{
+        zIndex: 10000,
+        overflowY: "auto",
+        padding: "1.5rem 1rem",
+        alignItems: "flex-start",
+        display: "flex",
+        justifyContent: "center"
+      }}
       onClick={onClose}
     >
       <div
@@ -268,18 +275,22 @@ export default function AdminConsignmentModal({
         style={{
           maxWidth: "880px",
           width: "95vw",
+          maxHeight: "92vh",
+          display: "flex",
+          flexDirection: "column",
           background: "linear-gradient(180deg, rgba(20, 24, 39, 0.98), rgba(15, 23, 42, 0.98))",
           border: "1px solid rgba(56, 189, 248, 0.3)",
           borderRadius: "16px",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.85)",
           backdropFilter: "blur(20px)",
-          color: "#f8fafc"
+          color: "#f8fafc",
+          margin: "auto 0"
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div
-          className="modal-header"
+          className="modal-header shrink-0"
           style={{
             padding: "1.25rem 1.5rem",
             borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
@@ -398,7 +409,18 @@ export default function AdminConsignmentModal({
         </div>
 
         {/* Modal Body */}
-        <div className="modal-body" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div
+          className="modal-body"
+          style={{
+            padding: "1.5rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.25rem",
+            overflowY: "auto",
+            flex: 1,
+            minHeight: 0
+          }}
+        >
           
           {/* Top Quick Action Bar */}
           <div
