@@ -182,7 +182,7 @@ export const NORTHLINE_SERVICES: LogisticsServiceItem[] = [
   },
   {
     id: "medical-dg",
-    title: "Medical & Dangerous Goods (DG)",
+    title: "Medical",
     category: "medical",
     icon: "💉",
     badge: "Certified & Audited",
