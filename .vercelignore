@@ -1,0 +1,11 @@
+# Large assets and documents
+deliverables/
+prep/
+reports/
+docs_and_presentations/
+.documentation/
+*.docx
+*.pdf
+*.pptx
+*.py
+*.tsbuildinfo
