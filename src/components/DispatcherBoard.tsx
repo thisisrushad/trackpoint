@@ -158,7 +158,7 @@ export default function DispatcherBoard({ jobs, fleet, onJobReassigned }: Dispat
                 <span>🎯 Allocated: {job.driver}</span>
               </div>
               <div className="j-actions" style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-                {(job.status === "Booked" || job.status === "Assigned") && (
+                {job.status === "Booked" && (
                   <button
                     className="btn btn-sm"
                     style={{
